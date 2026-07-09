@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowyAIPC - 知识库</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-outer: #F3F4F6;
+            --bg-window: #ffffff;
+            --bg-sidebar: #ffffff;
+            --bg-main: #F3F4F6;
+            --bg-hover: #f5f5f5;
+            --bg-selected: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-outer);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 外层容器 - 浮动窗口 */
+        .app-window {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 900px;
+            background: var(--bg-window);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Windows 标题栏 */
+        .title-bar {
+            height: 40px;
+            background: var(--bg-window);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 0 20px;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .title-bar-icon {
+            width: 20px;
+            height: 20px;
+            background: #000000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-btn {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .window-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .window-btn.close:hover {
+            background: #e81123;
+            color: white;
+        }
+
+        .window-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* 主内容区 */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+            gap: 12px;
+        }
+
+        /* 左侧区域 */
+        .left-panel {
+            display: flex;
+            height: 100%;
+            gap: 12px;
+            background: transparent;
+        }
+
+        /* 左侧窄边栏 */
+        .sidebar {
+            width: 56px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            flex-shrink: 0;
+            border-radius: 16px;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-selected);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* 右侧主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            padding: 24px 32px;
+        }
+
+        /* 知识库页面头部 */
+        .kb-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .kb-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .kb-new-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .kb-new-btn:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .kb-new-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 笔记本卡片网格 */
+        .notebook-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        /* ========== 知识库内页 ========== */
+        .kb-detail {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+        }
+
+        .kb-detail.active {
+            display: flex;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .detail-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .detail-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: color 0.2s;
+            user-select: none;
+        }
+
+        .detail-back:hover {
+            color: var(--text-primary);
+        }
+
+        .detail-back svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .detail-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .detail-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .detail-agent {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            position: relative;
+            padding: 2px 4px;
+            border-radius: 6px;
+            transition: background 0.2s;
+            width: fit-content;
+        }
+
+        .detail-agent:hover {
+            background: #f1f5f9;
+        }
+
+        .detail-agent img {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .detail-agent span {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .detail-agent-arrow {
+            width: 14px;
+            height: 14px;
+            color: var(--text-tertiary);
+            transition: transform 0.2s;
+            margin-left: 2px;
+        }
+
+        .detail-agent.active .detail-agent-arrow {
+            transform: rotate(180deg);
+        }
+
+        .detail-agent-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+            min-width: 200px;
+            padding: 6px;
+        }
+
+        .detail-agent-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .detail-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .view-toggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+        }
+
+        .view-toggle:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .view-toggle.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .view-toggle svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .detail-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            gap: 12px;
+        }
+
+        .detail-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            max-width: 320px;
+            padding: 0 14px;
+            height: 36px;
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .detail-search:focus-within {
+            border-color: #cbd5e1;
+            box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.12);
+        }
+
+        .detail-search svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+        }
+
+        .detail-search-input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            color: var(--text-primary);
+            outline: none;
+            font-family: inherit;
+        }
+
+        .detail-search-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .detail-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .detail-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e8e8e8;
+            background: #ffffff;
+            color: var(--text-primary);
+        }
+
+        .detail-btn:hover {
+            background: var(--bg-hover);
+        }
+
+        .detail-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .detail-btn-primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        .detail-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        /* 文件列表 */
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e8e8e8;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .file-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border-color: #d0d0d0;
+        }
+
+        /* 网格视图 */
+        .file-list.grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .file-list.grid .file-item {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 12px;
+        }
+
+        .file-list.grid .file-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 10px;
+        }
+
+        .file-list.grid .file-icon svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .file-list.grid .file-info {
+            width: 100%;
+        }
+
+        .file-list.grid .file-name {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.4;
+            height: 2.8em;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            white-space: normal;
+        }
+
+        .file-list.grid .file-status {
+            margin-top: auto;
+            font-size: 12px;
+        }
+
+        .file-list.grid .notebook-more {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+
+        .file-list.grid .notebook-menu {
+            top: 40px;
+            right: 0;
+        }
+
+        .file-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: #f3f4f6;
+        }
+
+        .file-icon svg {
+            width: 20px;
+            height: 20px;
+            color: #6b7280;
+        }
+
+        .file-info {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .file-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .file-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .file-status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+        }
+
+        .file-status.processing {
+            color: #f59e0b;
+        }
+
+        .file-status.pending {
+            color: #3b82f6;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        @media (max-width: 1200px) {
+            .notebook-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            .file-list.grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 860px) {
+            .notebook-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .file-list.grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .notebook-grid {
+                grid-template-columns: 1fr;
+            }
+            .file-list.grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 笔记本卡片 */
+        .notebook-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e8e8e8;
+            position: relative;
+        }
+
+        .notebook-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-color: #d0d0d0;
+        }
+
+        .notebook-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .notebook-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .notebook-icon img {
+            width: 48px;
+            height: 48px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .notebook-more {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
+        }
+
+        .notebook-more:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .notebook-more svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .notebook-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            line-height: 1.4;
+            height: 2.8em;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            overflow: hidden;
+        }
+
+        .notebook-source {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 更多菜单 */
+        .notebook-menu {
+            position: absolute;
+            top: 48px;
+            right: 12px;
+            background: white;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            min-width: 120px;
+            display: none;
+            padding: 4px 0;
+        }
+
+        .notebook-menu.active {
+            display: block;
+        }
+
+        .notebook-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s;
+            margin: 0 6px;
+            border-radius: 6px;
+        }
+
+        .notebook-menu-item:hover {
+            background: #f3f4f6;
+        }
+
+        .notebook-menu-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 4px 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0b0b0;
+        }
+
+        /* ========== 编辑弹窗样式 ========== */
+        .edit-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .edit-modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .edit-modal {
+            background: #ffffff;
+            border-radius: 16px;
+            width: 420px;
+            max-width: 90vw;
+            padding: 28px 32px 24px;
+            box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
+            transform: scale(0.95) translateY(10px);
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .edit-modal-overlay.active .edit-modal {
+            transform: scale(1) translateY(0);
+        }
+
+        .edit-modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 28px;
+        }
+
+        .edit-modal-icon {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 28px;
+        }
+
+        .icon-circle {
+            width: 96px;
+            height: 96px;
+            border-radius: 20px;
+            background: #5a5a5a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: #fff;
+            user-select: none;
+            overflow: hidden;
+        }
+
+        .edit-modal-form {
+            margin-bottom: 28px;
+        }
+
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-label {
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .form-label .required {
+            color: #ef4444;
+        }
+
+        .form-input {
+            width: 100%;
+            height: 56px;
+            padding: 0 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            font-size: 15px;
+            color: var(--text-primary);
+            font-family: inherit;
+            background: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: #cbd5e1;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
+        }
+
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+
+        /* ========== 自定义 agent 下拉选择器 ========== */
+        .agent-select {
+            position: relative;
+        }
+
+        .agent-select-trigger {
+            width: 100%;
+            height: 56px;
+            padding: 0 20px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+            user-select: none;
+        }
+
+        .agent-select-trigger:hover {
+            border-color: #cbd5e1;
+        }
+
+        .agent-select-trigger.active {
+            border-color: #cbd5e1;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.12);
+        }
+
+        .agent-select-placeholder {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            color: var(--text-primary);
+        }
+
+        .agent-placeholder-text {
+            color: #94a3b8;
+        }
+
+        .agent-select-arrow {
+            width: 16px;
+            height: 16px;
+            color: #94a3b8;
+            transition: transform 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .agent-select-trigger.active .agent-select-arrow {
+            transform: rotate(180deg);
+        }
+
+        .agent-select-dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+            max-height: 260px;
+            overflow-y: auto;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+            padding: 8px;
+        }
+
+        .agent-select-dropdown.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .agent-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .agent-option:hover {
+            background: #f1f5f9;
+        }
+
+        .agent-option.selected {
+            background: #eff6ff;
+        }
+
+        .agent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .agent-name {
+            font-size: 15px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .edit-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .modal-btn {
+            height: 40px;
+            padding: 0 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            outline: none;
+        }
+
+        .modal-btn-cancel {
+            background: #f5f5f5;
+            color: var(--text-secondary);
+        }
+
+        .modal-btn-cancel:hover {
+            background: #e8e8e8;
+            color: var(--text-primary);
+        }
+
+        .modal-btn-save {
+            background: #6366f1;
+            color: #fff;
+        }
+
+        .modal-btn-save:hover {
+            background: #4f46e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-window">
+        <!-- Windows 标题栏 -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <div class="title-bar-icon">F</div>
+                <span>FlowyAIPC</span>
+            </div>
+            <div class="window-controls">
+                <button class="window-btn minimize" title="最小化">
+                    <svg viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1" y="5.5" width="10" height="1"/>
+                    </svg>
+                </button>
+                <button class="window-btn maximize" title="最大化">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="1.5" y="1.5" width="9" height="9"/>
+                    </svg>
+                </button>
+                <button class="window-btn close" title="关闭">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M1 1l10 10M11 1L1 11"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- 左侧区域 -->
+            <div class="left-panel">
+                <!-- 左侧窄边栏 -->
+                <aside class="sidebar">
+                    <div class="sidebar-top">
+                        <div class="user-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                        <nav class="nav-menu">
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>对话</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                <span>知识库</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <span>连接</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span>会议</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                <span>AI视频</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='skill.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>技能</span>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="sidebar-bottom">
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>社区</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 右侧主内容区 - 知识库 -->
+            <main class="main-content">
+                <!-- 页面头部 -->
+                <div class="kb-header" id="kbListHeader">
+                    <h1 class="kb-title">知识库</h1>
+                    <button class="kb-new-btn" onclick="openNewModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        新建知识库
+                    </button>
+                </div>
+
+                <!-- 笔记本卡片网格 -->
+                <div class="notebook-grid" id="kbListView">
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/超能开发官.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">法国文明编年史：从高卢到现代法国的千年历史概览</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/论文研读助手.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">Flowy AI迷你电脑：自主硬件与AI推理的深度融合实践</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20346.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">Ryypol E001：自主人工智能模型部署与性能优化指南</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/股票分析助手.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">FlowyAIPC 和 OpenClaw 的集成方案与技术对比分析</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/办公交付助理.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">宋朝的兴起与大统一：赵匡胤黄袍加身到统一中原</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/网页PPT设计师.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">PLAUD.AI：将人工智能与语音笔记结合的创新应用探索</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/播客配音助手.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">Google NotebookLM：功能特性与AI笔记应用场景深度解析</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20351.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">战后：1945年以来的欧洲重建与冷战格局下的社会变迁</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/跨境电商操盘助手.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">无标题笔记本 - 项目需求分析与技术方案调研记录</div>
+                        <div class="notebook-source">0 个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20344.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">PLAUD.AI：将人工智能与语音笔记结合的创新应用探索（二）</div>
+                        <div class="notebook-source">1个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20345.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">无标题笔记本 - 用户反馈收集与产品迭代计划</div>
+                        <div class="notebook-source">0 个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20346.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">无标题笔记本 - 学习笔记与知识整理汇总</div>
+                        <div class="notebook-source">0 个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20347.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">PLAUD.AI：将人工智能与语音笔记结合的创新应用探索（三）</div>
+                        <div class="notebook-source">10个来源</div>
+                    </div>
+
+                    <div class="notebook-card" onclick="openNotebookDetail(this)">
+                        <div class="notebook-header">
+                            <div class="notebook-icon"><img src="agent%20Avatar/image%20348.png" alt="icon"></div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation(); openEditModal(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                    编辑
+                                </div>
+                                <div class="notebook-menu-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                        <div class="notebook-name">无标题笔记本 - 代码审查与性能优化问题汇总</div>
+                        <div class="notebook-source">0 个来源</div>
+                    </div>
+                </div>
+
+                <!-- 知识库内页 -->
+                <div class="kb-detail" id="kbDetailView">
+                    <div class="detail-header">
+                        <div class="detail-header-left">
+                            <div class="detail-back" onclick="closeNotebookDetail()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                                </svg>
+                                返回上级
+                            </div>
+                            <div class="detail-title" id="detailTitle">22</div>
+                            <div class="detail-agent" id="detailAgent" onclick="toggleDetailAgentDropdown()">
+                                <img src="agent%20Avatar/image%20344.png" alt="agent" id="detailAgentImg">
+                                <span id="detailAgentName">GPT-4</span>
+                                <svg class="detail-agent-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
+                                <div class="detail-agent-dropdown" id="detailAgentDropdown">
+                                    <div class="agent-option" data-value="gpt-4" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20344.png" alt="GPT-4">
+                                        <span class="agent-name">GPT-4</span>
+                                    </div>
+                                    <div class="agent-option" data-value="gpt-4o" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20345.png" alt="GPT-4o">
+                                        <span class="agent-name">GPT-4o</span>
+                                    </div>
+                                    <div class="agent-option" data-value="claude-3" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20346.png" alt="Claude 3">
+                                        <span class="agent-name">Claude 3</span>
+                                    </div>
+                                    <div class="agent-option" data-value="claude-3-5" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20347.png" alt="Claude 3.5">
+                                        <span class="agent-name">Claude 3.5 Sonnet</span>
+                                    </div>
+                                    <div class="agent-option" data-value="gemini-pro" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20348.png" alt="Gemini Pro">
+                                        <span class="agent-name">Gemini Pro</span>
+                                    </div>
+                                    <div class="agent-option" data-value="local-llm" onclick="selectDetailAgent(this)">
+                                        <img class="agent-avatar" src="agent%20Avatar/image%20349.png" alt="本地大模型">
+                                        <span class="agent-name">本地大模型</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="detail-subtitle" id="detailSubtitle">管理和协作您的文档</div>
+                        </div>
+                        <div class="detail-header-right">
+                            <button class="detail-btn detail-btn-primary">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                                导入文件
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="detail-toolbar">
+                        <div class="detail-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="M21 21l-4.35-4.35"/>
+                            </svg>
+                            <input type="text" placeholder="搜索文档" class="detail-search-input">
+                        </div>
+                        <div class="detail-actions">
+                            <div class="view-toggle active" id="viewListBtn" onclick="toggleView('list')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="8" y1="6" x2="21" y2="6"/>
+                                    <line x1="8" y1="12" x2="21" y2="12"/>
+                                    <line x1="8" y1="18" x2="21" y2="18"/>
+                                    <line x1="3" y1="6" x2="3.01" y2="6"/>
+                                    <line x1="3" y1="12" x2="3.01" y2="12"/>
+                                    <line x1="3" y1="18" x2="3.01" y2="18"/>
+                                </svg>
+                            </div>
+                            <div class="view-toggle" id="viewGridBtn" onclick="toggleView('grid')">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="7" height="7"/>
+                                    <rect x="14" y="3" width="7" height="7"/>
+                                    <rect x="14" y="14" width="7" height="7"/>
+                                    <rect x="3" y="14" width="7" height="7"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="file-list" id="fileList">
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">模型.md</div>
+                                <div class="file-meta">4.4 KB · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status">
+                                <span class="status-dot"></span>
+                                检索完成
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">HEARTBEAT.md</div>
+                                <div class="file-meta">193 B · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status">
+                                <span class="status-dot"></span>
+                                检索完成
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">SOUL.md</div>
+                                <div class="file-meta">1.7 KB · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status">
+                                <span class="status-dot"></span>
+                                检索完成
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">TOOLS.md</div>
+                                <div class="file-meta">860 B · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status">
+                                <span class="status-dot"></span>
+                                检索完成
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">AGENTS.md</div>
+                                <div class="file-meta">15.2 KB · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status processing">
+                                <span class="status-dot"></span>
+                                基础搜索可用，知识增强处理中
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="file-item">
+                            <div class="file-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <div class="file-info">
+                                <div class="file-name">IDENTITY.md</div>
+                                <div class="file-meta">342 B · 2026-07-02 17:03</div>
+                            </div>
+                            <div class="file-status pending">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                                </svg>
+                                待编入索引
+                            </div>
+                            <button class="notebook-more" onclick="event.stopPropagation(); toggleNotebookMenu(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"/>
+                                    <circle cx="12" cy="12" r="1"/>
+                                    <circle cx="12" cy="19" r="1"/>
+                                </svg>
+                            </button>
+                            <div class="notebook-menu">
+                                <div class="notebook-menu-item" onclick="event.stopPropagation();">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="3 6 5 6 21 6"/>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                    </svg>
+                                    删除
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+<div class="edit-modal-overlay" id="editModalOverlay">
+    <div class="edit-modal">
+        <div class="edit-modal-title">编辑知识库</div>
+        <div class="edit-modal-icon">
+            <div class="icon-circle" id="editModalIcon">
+                <span id="editModalIconEmoji">📓</span>
+                <img id="editModalIconImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover;">
+            </div>
+        </div>
+        <div class="edit-modal-form">
+            <div class="form-field">
+                <label class="form-label" for="editNotebookTitle"><span class="required">*</span> 知识库名称</label>
+                <input type="text" class="form-input" id="editNotebookTitle" placeholder="输入知识库名称">
+            </div>
+            <div class="form-field" style="margin-top: 20px;">
+                <label class="form-label"><span class="required">*</span> 配置 agent</label>
+                <div class="agent-select" id="agentSelect">
+                    <div class="agent-select-trigger" onclick="toggleAgentDropdown()">
+                        <div class="agent-select-placeholder" id="agentSelectValue">
+                            <span class="agent-placeholder-text">请选择 agent</span>
+                        </div>
+                        <svg class="agent-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="agent-select-dropdown" id="agentSelectDropdown">
+                        <div class="agent-option" data-value="gpt-4" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20344.png" alt="GPT-4">
+                            <span class="agent-name">GPT-4</span>
+                        </div>
+                        <div class="agent-option" data-value="gpt-4o" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20345.png" alt="GPT-4o">
+                            <span class="agent-name">GPT-4o</span>
+                        </div>
+                        <div class="agent-option" data-value="claude-3" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20346.png" alt="Claude 3">
+                            <span class="agent-name">Claude 3</span>
+                        </div>
+                        <div class="agent-option" data-value="claude-3-5" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20347.png" alt="Claude 3.5">
+                            <span class="agent-name">Claude 3.5 Sonnet</span>
+                        </div>
+                        <div class="agent-option" data-value="gemini-pro" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20348.png" alt="Gemini Pro">
+                            <span class="agent-name">Gemini Pro</span>
+                        </div>
+                        <div class="agent-option" data-value="local-llm" onclick="selectAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20349.png" alt="本地大模型">
+                            <span class="agent-name">本地大模型</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="edit-modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeEditModal()">取消</button>
+            <button class="modal-btn modal-btn-save" onclick="saveEditModal()">保存</button>
+        </div>
+    </div>
+</div>
+
+<!-- 新建知识库弹窗 -->
+<div class="edit-modal-overlay" id="newModalOverlay">
+    <div class="edit-modal">
+        <div class="edit-modal-title">新建知识库</div>
+        <div class="edit-modal-icon">
+            <div class="icon-circle" id="newModalIcon">
+                <span id="newModalIconEmoji">📓</span>
+                <img id="newModalIconImg" src="" alt="" style="display:none; width:100%; height:100%; object-fit:cover;">
+            </div>
+        </div>
+        <div class="edit-modal-form">
+            <div class="form-field">
+                <label class="form-label" for="newNotebookTitle"><span class="required">*</span> 知识库名称</label>
+                <input type="text" class="form-input" id="newNotebookTitle" placeholder="输入知识库名称">
+            </div>
+            <div class="form-field" style="margin-top: 20px;">
+                <label class="form-label"><span class="required">*</span> 配置 agent</label>
+                <div class="agent-select" id="newAgentSelect">
+                    <div class="agent-select-trigger" onclick="toggleNewAgentDropdown()">
+                        <div class="agent-select-placeholder" id="newAgentSelectValue">
+                            <span class="agent-placeholder-text">请选择 agent</span>
+                        </div>
+                        <svg class="agent-select-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"/>
+                        </svg>
+                    </div>
+                    <div class="agent-select-dropdown" id="newAgentSelectDropdown">
+                        <div class="agent-option" data-value="gpt-4" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20344.png" alt="GPT-4">
+                            <span class="agent-name">GPT-4</span>
+                        </div>
+                        <div class="agent-option" data-value="gpt-4o" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20345.png" alt="GPT-4o">
+                            <span class="agent-name">GPT-4o</span>
+                        </div>
+                        <div class="agent-option" data-value="claude-3" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20346.png" alt="Claude 3">
+                            <span class="agent-name">Claude 3</span>
+                        </div>
+                        <div class="agent-option" data-value="claude-3-5" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20347.png" alt="Claude 3.5">
+                            <span class="agent-name">Claude 3.5 Sonnet</span>
+                        </div>
+                        <div class="agent-option" data-value="gemini-pro" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20348.png" alt="Gemini Pro">
+                            <span class="agent-name">Gemini Pro</span>
+                        </div>
+                        <div class="agent-option" data-value="local-llm" onclick="selectNewAgent(this)">
+                            <img class="agent-avatar" src="agent%20Avatar/image%20349.png" alt="本地大模型">
+                            <span class="agent-name">本地大模型</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="edit-modal-actions">
+            <button class="modal-btn modal-btn-cancel" onclick="closeNewModal()">取消</button>
+            <button class="modal-btn modal-btn-save" onclick="saveNewModal()">创建</button>
+        </div>
+    </div>
+</div>
+
+<script>
+        // 切换笔记本更多菜单
+        function toggleNotebookMenu(button) {
+            const menu = button.nextElementSibling;
+            document.querySelectorAll('.notebook-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('active');
+            });
+            menu.classList.toggle('active');
+        }
+
+        // 点击外部关闭菜单
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.notebook-header')) {
+                document.querySelectorAll('.notebook-menu').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            }
+        });
+
+        // ===== 知识库内页切换 =====
+        function openNotebookDetail(card) {
+            const name = card.querySelector('.notebook-name').textContent.trim();
+            document.getElementById('detailTitle').textContent = name;
+
+            // 同步当前选中的 agent 到内页 header
+            const selectedImg = document.querySelector('#agentSelectValue img');
+            const selectedName = document.querySelector('#agentSelectValue span');
+            if (selectedImg && selectedName) {
+                document.getElementById('detailAgentImg').src = selectedImg.src;
+                document.getElementById('detailAgentName').textContent = selectedName.textContent;
+            }
+
+            document.getElementById('kbListHeader').style.display = 'none';
+            document.getElementById('kbListView').style.display = 'none';
+            document.getElementById('kbDetailView').classList.add('active');
+        }
+
+        function closeNotebookDetail() {
+            document.getElementById('kbDetailView').classList.remove('active');
+            document.getElementById('kbListHeader').style.display = '';
+            document.getElementById('kbListView').style.display = '';
+        }
+
+        function toggleDetailAgentDropdown() {
+            const agent = document.getElementById('detailAgent');
+            const dropdown = document.getElementById('detailAgentDropdown');
+            const isOpen = dropdown.classList.contains('active');
+
+            // 关闭其他下拉
+            document.querySelectorAll('.detail-agent-dropdown').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.detail-agent').forEach(a => a.classList.remove('active'));
+
+            if (!isOpen) {
+                dropdown.classList.add('active');
+                agent.classList.add('active');
+            }
+        }
+
+        function selectDetailAgent(el) {
+            const name = el.querySelector('.agent-name').textContent;
+            const avatar = el.querySelector('.agent-avatar').src;
+
+            document.getElementById('detailAgentImg').src = avatar;
+            document.getElementById('detailAgentName').textContent = name;
+
+            document.getElementById('detailAgentDropdown').classList.remove('active');
+            document.getElementById('detailAgent').classList.remove('active');
+        }
+
+        // 点击外部关闭 detail agent 下拉
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.detail-agent')) {
+                document.getElementById('detailAgentDropdown').classList.remove('active');
+                document.getElementById('detailAgent').classList.remove('active');
+            }
+        });
+
+        function toggleView(view) {
+            const listBtn = document.getElementById('viewListBtn');
+            const gridBtn = document.getElementById('viewGridBtn');
+            const fileList = document.getElementById('fileList');
+            if (view === 'list') {
+                listBtn.classList.add('active');
+                gridBtn.classList.remove('active');
+                fileList.classList.remove('grid');
+            } else {
+                gridBtn.classList.add('active');
+                listBtn.classList.remove('active');
+                fileList.classList.add('grid');
+            }
+        }
+
+        // ===== 编辑弹窗相关 =====
+        let currentEditingCard = null;
+
+        function openEditModal(el) {
+            // 关闭菜单
+            document.querySelectorAll('.notebook-menu').forEach(m => m.classList.remove('active'));
+
+            // 找到当前卡片
+            currentEditingCard = el.closest('.notebook-card');
+            const iconEl = currentEditingCard.querySelector('.notebook-icon');
+            const name = currentEditingCard.querySelector('.notebook-name').textContent.trim();
+
+            // 检查图标是图片还是 emoji
+            const iconImg = iconEl.querySelector('img');
+            if (iconImg) {
+                document.getElementById('editModalIconEmoji').style.display = 'none';
+                const editIconImg = document.getElementById('editModalIconImg');
+                editIconImg.src = iconImg.src;
+                editIconImg.style.display = 'block';
+            } else {
+                const icon = iconEl.textContent.trim();
+                document.getElementById('editModalIconEmoji').style.display = '';
+                document.getElementById('editModalIconEmoji').textContent = icon;
+                document.getElementById('editModalIconImg').style.display = 'none';
+            }
+
+            document.getElementById('editNotebookTitle').value = name;
+
+            // 显示弹窗
+            document.getElementById('editModalOverlay').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModalOverlay').classList.remove('active');
+            currentEditingCard = null;
+        }
+
+        function saveEditModal() {
+            const newName = document.getElementById('editNotebookTitle').value.trim();
+            if (!newName) return;
+            if (currentEditingCard) {
+                currentEditingCard.querySelector('.notebook-name').textContent = newName;
+                // 更新图标
+                const iconEl = currentEditingCard.querySelector('.notebook-icon');
+                const editIconImg = document.getElementById('editModalIconImg');
+                if (editIconImg.style.display !== 'none' && editIconImg.src) {
+                    iconEl.innerHTML = '<img src="' + editIconImg.src + '" alt="icon">';
+                } else {
+                    const emoji = document.getElementById('editModalIconEmoji').textContent;
+                    iconEl.textContent = emoji;
+                }
+            }
+            closeEditModal();
+        }
+
+        // 点击遮罩关闭弹窗
+        document.getElementById('editModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        // 回车保存
+        document.getElementById('editNotebookTitle').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') saveEditModal();
+            if (e.key === 'Escape') closeEditModal();
+        });
+
+        // ===== agent 下拉选择器相关 =====
+        let selectedAgentValue = '';
+
+        function toggleAgentDropdown() {
+            const trigger = document.querySelector('.agent-select-trigger');
+            const dropdown = document.getElementById('agentSelectDropdown');
+            const isOpen = dropdown.classList.contains('active');
+
+            // 关闭其他下拉
+            document.querySelectorAll('.agent-select-dropdown').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.agent-select-trigger').forEach(t => t.classList.remove('active'));
+
+            if (!isOpen) {
+                dropdown.classList.add('active');
+                trigger.classList.add('active');
+            }
+        }
+
+        function selectAgent(el) {
+            const value = el.dataset.value;
+            const name = el.querySelector('.agent-name').textContent;
+            const avatar = el.querySelector('.agent-avatar').src;
+
+            selectedAgentValue = value;
+
+            // 更新触发器显示
+            const valueEl = document.getElementById('agentSelectValue');
+            valueEl.innerHTML = '<img class="agent-avatar" src="' + avatar + '" alt="' + name + '" style="width:28px;height:28px;"><span>' + name + '</span>';
+
+            // 同步更新编辑弹窗顶部图标为 agent 头像
+            document.getElementById('editModalIconEmoji').style.display = 'none';
+            const editIconImg = document.getElementById('editModalIconImg');
+            editIconImg.src = avatar;
+            editIconImg.style.display = 'block';
+
+            // 更新选中状态
+            document.querySelectorAll('.agent-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+
+            // 关闭下拉
+            document.getElementById('agentSelectDropdown').classList.remove('active');
+            document.querySelector('.agent-select-trigger').classList.remove('active');
+        }
+
+        // 点击外部关闭 agent 下拉
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.agent-select')) {
+                document.getElementById('agentSelectDropdown').classList.remove('active');
+                document.querySelector('.agent-select-trigger').classList.remove('active');
+            }
+        });
+
+        // ===== 新建知识库弹窗相关 =====
+        let newSelectedAgentValue = '';
+
+        function openNewModal() {
+            // 重置表单
+            document.getElementById('newNotebookTitle').value = '';
+            document.getElementById('newModalIconEmoji').style.display = '';
+            document.getElementById('newModalIconEmoji').textContent = '📓';
+            document.getElementById('newModalIconImg').style.display = 'none';
+            document.getElementById('newModalIconImg').src = '';
+
+            // 重置 agent 选择
+            newSelectedAgentValue = '';
+            document.getElementById('newAgentSelectValue').innerHTML = '<span class="agent-placeholder-text">请选择 agent</span>';
+            document.querySelectorAll('#newAgentSelectDropdown .agent-option').forEach(opt => opt.classList.remove('selected'));
+
+            // 显示弹窗
+            document.getElementById('newModalOverlay').classList.add('active');
+        }
+
+        function closeNewModal() {
+            document.getElementById('newModalOverlay').classList.remove('active');
+        }
+
+        function saveNewModal() {
+            const newName = document.getElementById('newNotebookTitle').value.trim();
+            if (!newName) return;
+
+            // 创建新卡片
+            const grid = document.querySelector('.notebook-grid');
+            const newCard = document.createElement('div');
+            newCard.className = 'notebook-card';
+
+            // 确定图标
+            let iconContent = '📓';
+            let iconIsImg = false;
+            let iconSrc = '';
+            if (newSelectedAgentValue) {
+                const selectedOpt = document.querySelector('#newAgentSelectDropdown .agent-option[data-value="' + newSelectedAgentValue + '"]');
+                if (selectedOpt) {
+                    iconSrc = selectedOpt.querySelector('.agent-avatar').src;
+                    iconIsImg = true;
+                }
+            }
+
+            if (iconIsImg) {
+                iconContent = '<img src="' + iconSrc + '" alt="icon">';
+            }
+
+            newCard.innerHTML = '<div class="notebook-header">' +
+                '<div class="notebook-icon">' + iconContent + '</div>' +
+                '<button class="notebook-more" onclick="toggleNotebookMenu(this)">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>' +
+                '</svg></button>' +
+                '<div class="notebook-menu">' +
+                '<div class="notebook-menu-item" onclick="openEditModal(this)">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>' +
+                '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' +
+                '</svg>编辑</div>' +
+                '<div class="notebook-menu-item">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+                '</svg>删除</div>' +
+                '</div></div>' +
+                '<div class="notebook-name">' + newName + '</div>' +
+                '<div class="notebook-source">0 个来源</div>';
+
+            grid.insertBefore(newCard, grid.firstChild);
+            closeNewModal();
+        }
+
+        // 新建弹窗 agent 下拉
+        function toggleNewAgentDropdown() {
+            const trigger = document.querySelector('#newAgentSelect .agent-select-trigger');
+            const dropdown = document.getElementById('newAgentSelectDropdown');
+            const isOpen = dropdown.classList.contains('active');
+
+            // 关闭其他下拉
+            document.querySelectorAll('.agent-select-dropdown').forEach(d => d.classList.remove('active'));
+            document.querySelectorAll('.agent-select-trigger').forEach(t => t.classList.remove('active'));
+
+            if (!isOpen) {
+                dropdown.classList.add('active');
+                trigger.classList.add('active');
+            }
+        }
+
+        function selectNewAgent(el) {
+            const value = el.dataset.value;
+            const name = el.querySelector('.agent-name').textContent;
+            const avatar = el.querySelector('.agent-avatar').src;
+
+            newSelectedAgentValue = value;
+
+            // 更新触发器显示
+            const valueEl = document.getElementById('newAgentSelectValue');
+            valueEl.innerHTML = '<img class="agent-avatar" src="' + avatar + '" alt="' + name + '" style="width:28px;height:28px;"><span>' + name + '</span>';
+
+            // 更新弹窗顶部图标为 agent 头像
+            document.getElementById('newModalIconEmoji').style.display = 'none';
+            const iconImg = document.getElementById('newModalIconImg');
+            iconImg.src = avatar;
+            iconImg.style.display = 'block';
+
+            // 更新选中状态
+            document.querySelectorAll('#newAgentSelectDropdown .agent-option').forEach(opt => opt.classList.remove('selected'));
+            el.classList.add('selected');
+
+            // 关闭下拉
+            document.getElementById('newAgentSelectDropdown').classList.remove('active');
+            document.querySelector('#newAgentSelect .agent-select-trigger').classList.remove('active');
+        }
+
+        // 点击外部关闭新建弹窗 agent 下拉
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#newAgentSelect')) {
+                const dropdown = document.getElementById('newAgentSelectDropdown');
+                const trigger = document.querySelector('#newAgentSelect .agent-select-trigger');
+                if (dropdown) dropdown.classList.remove('active');
+                if (trigger) trigger.classList.remove('active');
+            }
+        });
+
+        // 新建弹窗回车保存
+        document.getElementById('newNotebookTitle').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') saveNewModal();
+            if (e.key === 'Escape') closeNewModal();
+        });
+
+        // 点击遮罩关闭新建弹窗
+        document.getElementById('newModalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) closeNewModal();
+        });
+
+        // 导航项切换 - 点击跳转到对应页面
+        const pageMap = {
+            '对话': 'chat.html',
+            '专家': 'agent.html',
+            '任务': 'scheduled-tasks.html',
+            '知识库': 'knowledge-base.html',
+            '连接': 'channels-ui.html',
+            '设置': 'settings.html'
+        };
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const span = this.querySelector('span');
+                if (!span) return;
+                const text = span.textContent.trim();
+                const target = pageMap[text];
+                if (target) {
+                    window.location.href = target;
+                } else {
+                    document.querySelectorAll('.sidebar .nav-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

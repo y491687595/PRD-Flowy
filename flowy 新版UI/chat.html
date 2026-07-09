@@ -1,0 +1,2622 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QClaw - AI 对话助手</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-outer: #F3F4F6;
+            --bg-window: #ffffff;
+            --bg-sidebar: #ffffff;
+            --bg-agent-panel: #ffffff;
+            --bg-main: #ffffff;
+            --bg-hover: #f5f5f5;
+            --bg-selected: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f97316;
+            --accent-green: #22c55e;
+            --accent-blue: #3b82f6;
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-outer);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 外层容器 - 浮动窗口 */
+        .app-window {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 900px;
+            background: var(--bg-window);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Windows 标题栏 */
+        .title-bar {
+            height: 40px;
+            background: var(--bg-window);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 0 20px;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .title-bar-icon {
+            width: 20px;
+            height: 20px;
+            background: #000000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-btn {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .window-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .window-btn.close:hover {
+            background: #e81123;
+            color: white;
+        }
+
+        .window-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* 主内容区 */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+            gap: 12px;
+        }
+
+        /* 左侧区域 - 边栏和Agent列表分开 */
+        .left-panel {
+            display: flex;
+            height: 100%;
+            gap: 12px;
+            background: transparent;
+        }
+
+        /* 左侧窄边栏 */
+        .sidebar {
+            width: 56px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            flex-shrink: 0;
+            border-radius: 16px;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-selected);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Agent 列表面板 */
+        .agent-panel {
+            width: 260px;
+            background: #F3F4F6;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            padding: 12px;
+            border-radius: 16px;
+        }
+
+        .agent-panel-header {
+            padding-bottom: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: #ffffff;
+            border-radius: 10px;
+            color: var(--text-tertiary);
+            font-size: 13px;
+            cursor: text;
+            transition: all 0.2s;
+            border: 1px solid #e5e5e5;
+        }
+
+        .search-box:hover {
+            background: #f9f9f9;
+            border-color: #d0d0d0;
+        }
+
+        .search-box svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .new-agent-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 10px;
+            background: var(--bg-hover);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            border: 1px solid #d0d0d0;
+        }
+
+        .new-agent-btn:hover {
+            background: #eeeeee;
+            color: var(--text-primary);
+            border-color: #b0b0b0;
+        }
+
+        .new-agent-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .agent-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 8px;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+            background: transparent;
+        }
+
+        .agent-item:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .agent-item.active {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .agent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .agent-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .agent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        /* 右侧主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+        }
+
+        .tab-switcher {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-hover);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .tab-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .points-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .points-icon {
+            width: 18px;
+            height: 18px;
+            color: #f59e0b;
+        }
+
+        .points-value {
+            color: var(--text-primary);
+        }
+
+        .buy-btn {
+            color: #f97316;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .buy-btn:hover {
+            color: #ea580c;
+            text-decoration: underline;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .brain-btn .brain-icon {
+            transition: all 0.3s;
+        }
+
+        .brain-btn.active .brain-icon {
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        .shrink-btn .shrink-icon {
+            transition: all 0.3s;
+        }
+
+        .shrink-btn.active .shrink-icon {
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        .shrink-btn.active .shrink-icon line {
+            stroke: white;
+        }
+
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .welcome-title .sparkle {
+            color: var(--accent-purple);
+            font-size: 22px;
+        }
+
+        .welcome-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* 产品经理页面样式 */
+        .pm-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+        }
+
+        .pm-avatar {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+        }
+
+        .pm-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .pm-title .pm-sparkle {
+            color: #ff6b6b;
+            font-size: 20px;
+        }
+
+        .pm-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 60px;
+        }
+
+        .pm-suggestions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .pm-suggestion-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 20px;
+            background: #f8f8f8;
+            border-radius: 24px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 280px;
+        }
+
+        .pm-suggestion-item:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .pm-arrow {
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Skill 卡片网格 */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .skill-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .skill-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .skill-card:nth-child(1) {
+            background: linear-gradient(135deg, #fef3ff 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(2) {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(3) {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(4) {
+            background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+        }
+
+        .skill-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .skill-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-bottom: 14px;
+        }
+
+        .skill-illustration {
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .skill-illustration svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: white;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: auto;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: none;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .refresh-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            margin-top: auto;
+            padding: 0 50px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-container {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+
+        .input-container:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .input-editor {
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 12px;
+            min-height: 24px;
+            outline: none;
+            cursor: text;
+        }
+
+        .input-editor:empty:before {
+            content: attr(placeholder);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: var(--bg-hover);
+            height: 32px;
+        }
+
+        .toolbar-btn:hover {
+            background: #eeeeee;
+            color: var(--text-primary);
+        }
+
+        .toolbar-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* 模型选择下拉菜单 */
+        .model-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            min-width: 280px;
+            display: none;
+            z-index: 100;
+        }
+
+        .model-dropdown.show {
+            display: block;
+        }
+
+        .model-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .model-dropdown-item.selected {
+            background: #f0f0f0;
+        }
+
+        .model-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .model-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .model-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .model-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .model-points {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .model-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .model-badge.hot {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .model-dropdown-divider {
+            height: 1px;
+            background: #e5e5e5;
+            margin: 8px 0;
+        }
+
+        .model-dropdown-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .model-dropdown-footer:hover {
+            background: #f5f5f5;
+        }
+
+        .model-dropdown-footer svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .model-dropdown-footer .arrow {
+            margin-left: auto;
+            font-size: 12px;
+        }
+
+        .toolbar-btn-wrapper {
+            position: relative;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .file-tag {
+            position: relative;
+            cursor: default;
+        }
+
+        .file-tag .delete-btn {
+            display: none;
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            align-items: center;
+            justify-content: center;
+            background: #ff4444;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            border: none;
+            padding: 0;
+        }
+
+        .file-tag:hover .delete-btn {
+            display: flex;
+        }
+
+        .file-tag:hover {
+            padding-right: 28px;
+        }
+
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--bg-hover);
+            color: var(--text-tertiary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: #E55318;
+            color: white;
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        /* Agent 历史记录展开 */
+        .agent-item-wrapper {
+            position: relative;
+            margin-bottom: 4px;
+        }
+
+        .agent-item-wrapper .agent-item {
+            margin-bottom: 0;
+            position: relative;
+        }
+
+        .agent-item-wrapper:hover .agent-actions {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .agent-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .agent-action-btn {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
+        }
+
+        .agent-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .agent-action-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .agent-history {
+            display: none;
+            padding: 4px 0 8px 0;
+            animation: slideDown 0.2s ease;
+        }
+
+        .agent-history.expanded {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+            position: relative;
+        }
+
+        .history-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-primary);
+        }
+
+        .history-item svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: var(--text-tertiary);
+        }
+
+        .history-item-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        /* 历史记录项更多按钮 */
+        .history-item-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .history-item-more:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .history-item-more svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .history-item:hover .history-item-more {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 历史记录项菜单 */
+        .history-item-menu {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            padding: 6px;
+            min-width: 120px;
+            display: none;
+            z-index: 200;
+        }
+
+        .history-item-menu.show {
+            display: block;
+        }
+
+        .history-item-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .history-item-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .history-item-menu-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-secondary);
+        }
+
+        .history-more {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .history-more:hover {
+            color: var(--text-primary);
+        }
+
+        .history-more svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 更多菜单 */
+        .more-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            min-width: 160px;
+            display: none;
+            z-index: 100;
+        }
+
+        .more-menu.show {
+            display: block;
+        }
+
+        .more-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .more-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .more-menu-item svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+        }
+
+        /* 对话消息区域 */
+        .chat-messages {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+            padding: 20px 0;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .chat-messages.active {
+            display: flex;
+        }
+
+        /* 用户消息 */
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .message-user-content {
+            background: #E55318;
+            border-radius: 16px;
+            padding: 12px 18px;
+            font-size: 14px;
+            color: #ffffff;
+            line-height: 1.6;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* AI 消息 */
+        .message-ai {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .message-ai-content {
+            flex: 1;
+            max-width: calc(100% - 44px);
+        }
+
+        .message-ai-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .message-ai-text p {
+            margin-bottom: 12px;
+        }
+
+        .message-ai-text strong {
+            font-weight: 600;
+        }
+
+        /* Skill 示例列表 */
+        .skill-examples {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 16px 0;
+        }
+
+        .skill-example-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .skill-example-icon {
+            font-size: 16px;
+        }
+
+        /* Skill 类型区域 */
+        .skill-type-section {
+            margin: 20px 0;
+        }
+
+        .skill-type-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .skill-type-icon {
+            font-size: 16px;
+        }
+
+        .skill-type-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding-left: 22px;
+        }
+
+        /* Skill 卡片网格（AI回复中的） */
+        .skill-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .skill-card-mini {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .skill-card-mini:hover {
+            border-color: #d0d0d0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .skill-card-mini-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .skill-card-mini-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 消息底部操作栏 */
+        .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .message-action-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
+        }
+
+        .message-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+
+        .message-action-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #e0e0e0;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d0d0d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-window">
+        <!-- Windows 标题栏 -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <div class="title-bar-icon">F</div>
+                <span>FlowyAIPC</span>
+            </div>
+            <div class="window-controls">
+                <button class="window-btn minimize" title="最小化">
+                    <svg viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1" y="5.5" width="10" height="1"/>
+                    </svg>
+                </button>
+                <button class="window-btn maximize" title="最大化">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="1.5" y="1.5" width="9" height="9"/>
+                    </svg>
+                </button>
+                <button class="window-btn close" title="关闭">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M1 1l10 10M11 1L1 11"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- 左侧融合面板 -->
+            <div class="left-panel">
+                <!-- 左侧窄边栏 -->
+                <aside class="sidebar">
+                    <div class="sidebar-top">
+                        <div class="user-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                        <nav class="nav-menu">
+                            <div class="nav-item active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>对话</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                <span>任务</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                <span>知识库</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <span>连接</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span>会议</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                <span>AI视频</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='skill.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>技能</span>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="sidebar-bottom">
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>社区</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Agent 列表面板 -->
+                <aside class="agent-panel">
+                    <div class="agent-panel-header">
+                        <div class="search-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <span>搜索</span>
+                        </div>
+                    </div>
+                    <div class="agent-list">
+                        <div class="agent-item-wrapper">
+                            <div class="agent-item active">
+                                <div class="agent-avatar" style="background: #000000;">
+                                    <span style="color: white; font-weight: bold;">F</span>
+                                </div>
+                                <div class="agent-info">
+                                    <div class="agent-name">AI助手</div>
+                                    <div class="agent-desc">随时随地，帮您高效干活</div>
+                                </div>
+                                <div class="agent-actions">
+                                    <button class="agent-action-btn more-btn" title="更多">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="5" r="1"/>
+                                            <circle cx="12" cy="12" r="1"/>
+                                            <circle cx="12" cy="19" r="1"/>
+                                        </svg>
+                                    </button>
+                                    <button class="agent-action-btn toggle-btn" title="展开/收起">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="18 15 12 9 6 15"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="more-menu">
+                                    <div class="more-menu-item">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 19V5M5 12l7-7 7 7"/>
+                                        </svg>
+                                        <span>置顶</span>
+                                    </div>
+                                    <div class="more-menu-item">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                                            <circle cx="12" cy="7" r="4"/>
+                                        </svg>
+                                        <span>Agent详情</span>
+                                    </div>
+                                    <div class="more-menu-item">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        <span>删除</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="agent-history expanded">
+                                <div class="history-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    <span class="history-item-text">QClaw的邮件服务都能帮我...</span>
+                                    <div class="history-item-more" onclick="toggleHistoryItemMenu(event, this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="5" r="1"/>
+                                            <circle cx="12" cy="12" r="1"/>
+                                            <circle cx="12" cy="19" r="1"/>
+                                        </svg>
+                                    </div>
+                                    <div class="history-item-menu">
+                                        <div class="history-item-menu-item" onclick="editHistoryItemName(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                            <span>编辑名称</span>
+                                        </div>
+                                        <div class="history-item-menu-item" onclick="deleteHistoryItem(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                            <span>删除</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="history-item">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    <span class="history-item-text">帮我写一个 3 分钟的「社交...</span>
+                                    <div class="history-item-more" onclick="toggleHistoryItemMenu(event, this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="5" r="1"/>
+                                            <circle cx="12" cy="12" r="1"/>
+                                            <circle cx="12" cy="19" r="1"/>
+                                        </svg>
+                                    </div>
+                                    <div class="history-item-menu">
+                                        <div class="history-item-menu-item" onclick="editHistoryItemName(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                            <span>编辑名称</span>
+                                        </div>
+                                        <div class="history-item-menu-item" onclick="deleteHistoryItem(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                            <span>删除</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="history-item">
+                                    <svg viewBox="0 0 48 48" width="14" height="14">
+                                        <path d="M36.9974 21.7112C36.8434 13.0079 29.7401 6 21 6C12.1634 6 5 13.1634 5 22C5 26.1701 6.59531 29.9676 9.20892 32.8154L8.01043 40.0257L15.125 36.9699C18.2597 38.0122 21.218 38.2728 24 37.7516" stroke="#01C260" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                                        <path d="M15.125 20.4667C16.3676 20.4667 17.375 19.4519 17.375 18.2C17.375 16.9482 16.3676 15.9333 15.125 15.9333C13.8824 15.9333 12.875 16.9482 12.875 18.2C12.875 19.4519 13.8824 20.4667 15.125 20.4667Z" fill="#01C260"/>
+                                        <path d="M24.125 20.4667C25.3676 20.4667 26.375 19.4519 26.375 18.2C26.375 16.9482 25.3676 15.9333 24.125 15.9333C22.8824 15.9333 21.875 16.9482 21.875 18.2C21.875 19.4519 22.8824 20.4667 24.125 20.4667Z" fill="#01C260"/>
+                                    </svg>
+                                    <span class="history-item-text">"手机远程办公"都能帮我做...</span>
+                                    <div class="history-item-more" onclick="toggleHistoryItemMenu(event, this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="5" r="1"/>
+                                            <circle cx="12" cy="12" r="1"/>
+                                            <circle cx="12" cy="19" r="1"/>
+                                        </svg>
+                                    </div>
+                                    <div class="history-item-menu">
+                                        <div class="history-item-menu-item" onclick="editHistoryItemName(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                            </svg>
+                                            <span>编辑名称</span>
+                                        </div>
+                                        <div class="history-item-menu-item" onclick="deleteHistoryItem(event, this)">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                            </svg>
+                                            <span>删除</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="history-more">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                    <span>展开更多</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="agent-item">
+                            <div class="agent-avatar" style="background: #ffe4e1;">
+                                <span>👩‍💼</span>
+                            </div>
+                            <div class="agent-info">
+                                <div class="agent-name">产品经理</div>
+                                <div class="agent-desc">结果导向、简洁高效、不说...</div>
+                            </div>
+                        </div>
+                        <div class="agent-item">
+                            <div class="agent-avatar" style="background: #e8d5f2;">
+                                <span>🎮</span>
+                            </div>
+                            <div class="agent-info">
+                                <div class="agent-name">游戏设计师</div>
+                                <div class="agent-desc">游戏机制+系统设计+数值平...</div>
+                            </div>
+                        </div>
+                        <div class="agent-item">
+                            <div class="agent-avatar" style="background: #ff4757;">
+                                <span style="color: white; font-size: 12px;">红</span>
+                            </div>
+                            <div class="agent-info">
+                                <div class="agent-name">小红书爆款操盘手</div>
+                                <div class="agent-desc">从选题到爆款一条龙，你负...</div>
+                            </div>
+                        </div>
+                        <div class="agent-item">
+                            <div class="agent-avatar" style="background: #2f3542;">
+                                <span style="color: white; font-weight: bold;">N</span>
+                            </div>
+                            <div class="agent-info">
+                                <div class="agent-name">Notion专家</div>
+                                <div class="agent-desc">精通Notion，自动搭建高效...</div>
+                            </div>
+                        </div>
+                        <div class="agent-item">
+                            <div class="agent-avatar" style="background: #74b9ff;">
+                                <span>🎓</span>
+                            </div>
+                            <div class="agent-info">
+                                <div class="agent-name">高考志愿填报顾问</div>
+                                <div class="agent-desc">精准专业，每分都不浪费</div>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 右侧主内容区 -->
+            <main class="main-content">
+                <header class="main-header">
+                    <div class="points-display">
+                        <svg class="points-icon" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                        </svg>
+                        <span class="points-value">23142</span>
+                        <span>|</span>
+                        <span class="buy-btn">购买</span>
+                    </div>
+                    <div class="header-actions">
+                        <button class="icon-btn" title="刷新">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="23 4 23 10 17 10"/>
+                                <polyline points="1 20 1 14 7 14"/>
+                                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                            </svg>
+                        </button>
+                        <button class="icon-btn shrink-btn" title="缩小上下文" onclick="this.classList.toggle('active')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-icon">
+                                <circle cx="12" cy="12" r="10"/>
+                                <line x1="8" y1="12" x2="16" y2="12"/>
+                            </svg>
+                        </button>
+                        <button class="icon-btn brain-btn" title="大脑" onclick="this.classList.toggle('active')">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="brain-icon">
+                                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+                                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <div class="content-area" id="contentArea">
+                    <!-- 对话消息区域 -->
+                    <div class="chat-messages" id="chatMessages"></div>
+
+                    <!-- 默认显示FlowyAIPC页面 -->
+                    <div class="welcome-section" id="flowyWelcome">
+                        <h1 class="welcome-title">
+                            Hi，我是AI助手
+                            <span class="sparkle">✨</span>
+                        </h1>
+                        <p class="welcome-subtitle">随时随地，帮您高效干活</p>
+                    </div>
+
+                    <!-- 产品经理页面 -->
+                    <div class="pm-page" id="pmPage" style="display: none;">
+                        <div class="pm-avatar">
+                            <svg width="120" height="120" viewBox="0 0 120 120">
+                                <!-- 头发 -->
+                                <ellipse cx="60" cy="45" rx="35" ry="30" fill="#ffb6c1"/>
+                                <path d="M25 45 Q25 20 60 15 Q95 20 95 45" fill="#ffb6c1"/>
+                                <!-- 脸 -->
+                                <ellipse cx="60" cy="55" rx="28" ry="32" fill="#ffe4d6"/>
+                                <!-- 眼睛 -->
+                                <ellipse cx="50" cy="52" rx="4" ry="5" fill="#333"/>
+                                <ellipse cx="70" cy="52" rx="4" ry="5" fill="#333"/>
+                                <!-- 腮红 -->
+                                <ellipse cx="45" cy="62" rx="5" ry="3" fill="#ffb6c1" opacity="0.6"/>
+                                <ellipse cx="75" cy="62" rx="5" ry="3" fill="#ffb6c1" opacity="0.6"/>
+                                <!-- 嘴巴 -->
+                                <path d="M55 68 Q60 72 65 68" stroke="#ff9999" stroke-width="2" fill="none"/>
+                                <!-- 身体/衣服 -->
+                                <path d="M35 85 Q60 80 85 85 L90 110 L30 110 Z" fill="#fff"/>
+                                <!-- 电脑 -->
+                                <rect x="45" y="75" width="30" height="20" rx="2" fill="#e0e0e0"/>
+                                <rect x="47" y="77" width="26" height="14" rx="1" fill="#87ceeb"/>
+                                <!-- 柯基 -->
+                                <ellipse cx="85" cy="95" rx="15" ry="10" fill="#f4a460"/>
+                                <ellipse cx="95" cy="88" rx="8" ry="7" fill="#f4a460"/>
+                                <ellipse cx="98" cy="85" rx="3" ry="2" fill="#333"/>
+                                <ellipse cx="92" cy="85" rx="3" ry="2" fill="#333"/>
+                            </svg>
+                        </div>
+                        <h1 class="pm-title">
+                            Hi，我是产品经理
+                            <span class="pm-sparkle">✦</span>
+                        </h1>
+                        <p class="pm-subtitle">结果导向、简洁高效、不说废话的产品负责人</p>
+                        <div class="pm-suggestions">
+                            <div class="pm-suggestion-item" style="background-color: #ffffff;">
+                                <span>帮我写一份产品需求文档</span>
+                                <span class="pm-arrow">→</span>
+                            </div>
+                            <div class="pm-suggestion-item" style="background-color: #ffffff;">
+                                <span>分析用户反馈帮我优先级排序需求</span>
+                                <span class="pm-arrow">→</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 游戏设计师页面 -->
+                    <div class="pm-page" id="gameDesignerPage" style="display: none;">
+                        <div class="pm-avatar">
+                            <svg width="120" height="120" viewBox="0 0 120 120">
+                                <!-- 游戏手柄主体 -->
+                                <path d="M25 50 Q25 35 40 35 L80 35 Q95 35 95 50 L95 70 Q95 85 80 85 L40 85 Q25 85 25 70 Z" fill="#a855f7"/>
+                                <!-- 手柄左侧握把 -->
+                                <ellipse cx="35" cy="75" rx="15" ry="18" fill="#9333ea"/>
+                                <!-- 手柄右侧握把 -->
+                                <ellipse cx="85" cy="75" rx="15" ry="18" fill="#9333ea"/>
+                                <!-- 方向键背景 -->
+                                <circle cx="45" cy="55" r="12" fill="#7c3aed"/>
+                                <!-- 方向键十字 -->
+                                <rect x="42" y="48" width="6" height="14" rx="1" fill="#fff"/>
+                                <rect x="38" y="52" width="14" height="6" rx="1" fill="#fff"/>
+                                <!-- 右侧功能键背景 -->
+                                <circle cx="75" cy="55" r="12" fill="#7c3aed"/>
+                                <!-- 功能键 - 彩色按钮 -->
+                                <circle cx="75" cy="50" r="3" fill="#fbbf24"/>
+                                <circle cx="80" cy="55" r="3" fill="#34d399"/>
+                                <circle cx="75" cy="60" r="3" fill="#60a5fa"/>
+                                <circle cx="70" cy="55" r="3" fill="#f87171"/>
+                                <!-- 中间装饰线 -->
+                                <rect x="55" y="52" width="10" height="2" rx="1" fill="#7c3aed"/>
+                                <rect x="55" y="58" width="10" height="2" rx="1" fill="#7c3aed"/>
+                                <!-- 手柄连接线 -->
+                                <path d="M60 35 Q60 25 70 20" stroke="#a855f7" stroke-width="3" fill="none"/>
+                                <!-- 星星装饰 -->
+                                <text x="85" y="25" font-size="16" fill="#fbbf24">✦</text>
+                            </svg>
+                        </div>
+                        <h1 class="pm-title">
+                            Hi，我是游戏设计师
+                            <span class="pm-sparkle">✦</span>
+                        </h1>
+                        <p class="pm-subtitle">游戏机制+系统设计+数值平衡，好玩是王道</p>
+                        <div class="pm-suggestions">
+                            <div class="pm-suggestion-item" style="background-color: #ffffff;">
+                                <span>帮我设计roguelike游戏的数值系统</span>
+                                <span class="pm-arrow">→</span>
+                            </div>
+                            <div class="pm-suggestion-item" style="background-color: #ffffff;">
+                                <span>分析这个游戏关卡设计的优缺点</span>
+                                <span class="pm-arrow">→</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="refresh-btn" id="refreshBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <polyline points="1 20 1 14 7 14"/>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                        </svg>
+                        <span>换一换</span>
+                    </button>
+
+                    <div class="skills-grid" id="skillsGrid">
+                        <div class="skill-card">
+                            <div class="skill-title">安装你的第一个Skill</div>
+                            <div class="skill-desc">一键教你安装超能力</div>
+                            <div class="skill-illustration">
+                                <img src="picture/skill.png" alt="安装Skill" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+                        <div class="skill-card">
+                            <div class="skill-title">整理桌面</div>
+                            <div class="skill-desc">还你清爽桌面</div>
+                            <div class="skill-illustration">
+                                <img src="picture/整理桌面.png" alt="整理桌面" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+                        <div class="skill-card">
+                            <div class="skill-title">邮件管理</div>
+                            <div class="skill-desc">帮你高效处理邮件</div>
+                            <div class="skill-illustration">
+                                <img src="picture/邮件管理.png" alt="邮件管理" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+                        <div class="skill-card">
+                            <div class="skill-title">手机远程办公</div>
+                            <div class="skill-desc">随时处理在线任务</div>
+                            <div class="skill-illustration">
+                                <img src="picture/手机远程.png" alt="手机远程办公" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-section">
+                    <div class="input-container">
+                        <div class="input-editor" contenteditable="true" placeholder="可以描述任务或提问任何问题"></div>
+                        <div class="input-toolbar">
+                            <div class="toolbar-left">
+                                <div class="toolbar-btn-wrapper">
+                                    <button class="toolbar-btn" id="modelSelectBtn">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                        </svg>
+                                        <span id="selectedModel">Auto</span>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;">
+                                            <polyline points="6 9 12 15 18 9"/>
+                                        </svg>
+                                    </button>
+                                    <div class="model-dropdown" id="modelDropdown">
+                                        <div class="model-dropdown-item selected" data-model="Auto" data-points="x1.0">
+                                            <div class="model-icon" style="background: #f0f0f0;">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                                                </svg>
+                                            </div>
+                                            <div class="model-info">
+                                                <span class="model-name">Auto</span>
+                                                <span class="model-points">x1.0 积分</span>
+                                            </div>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; color: #999;">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>
+                                        </div>
+                                        <div class="model-dropdown-item" data-model="Hy3 preview" data-points="x0.5">
+                                            <div class="model-icon" style="background: #dbeafe;">
+                                                <svg viewBox="0 0 24 24" fill="#3b82f6" stroke="none">
+                                                    <circle cx="12" cy="12" r="10"/>
+                                                </svg>
+                                            </div>
+                                            <div class="model-info">
+                                                <span class="model-name">Hy3 preview</span>
+                                                <span class="model-points">x0.5 积分</span>
+                                            </div>
+                                        </div>
+                                        <div class="model-dropdown-item" data-model="DeepSeek-V4-Pro" data-points="x2.3">
+                                            <div class="model-icon" style="background: #fef3c7;">
+                                                <svg viewBox="0 0 24 24" fill="#f59e0b" stroke="none">
+                                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                                </svg>
+                                            </div>
+                                            <div class="model-info">
+                                                <span class="model-name">DeepSeek-V4-Pro</span>
+                                                <span class="model-points">x2.3 积分</span>
+                                            </div>
+                                            <span class="model-badge hot">爆满</span>
+                                        </div>
+                                        <div class="model-dropdown-item" data-model="MiniMax-M2.7" data-points="x0.7">
+                                            <div class="model-icon" style="background: #fce7f3;">
+                                                <svg viewBox="0 0 24 24" fill="#ec4899" stroke="none">
+                                                    <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>
+                                                </svg>
+                                            </div>
+                                            <div class="model-info">
+                                                <span class="model-name">MiniMax-M2.7</span>
+                                                <span class="model-points">x0.7 积分</span>
+                                            </div>
+                                        </div>
+                                        <div class="model-dropdown-item" data-model="MiniMax-M2.5" data-points="x0.5">
+                                            <div class="model-icon" style="background: #fce7f3;">
+                                                <svg viewBox="0 0 24 24" fill="#ec4899" stroke="none">
+                                                    <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"/>
+                                                </svg>
+                                            </div>
+                                            <div class="model-info">
+                                                <span class="model-name">MiniMax-M2.5</span>
+                                                <span class="model-points">x0.5 积分</span>
+                                            </div>
+                                        </div>
+                                        <div class="model-dropdown-divider"></div>
+                                        <div class="model-dropdown-footer">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                                <path d="M2 17l10 5 10-5"/>
+                                                <path d="M2 12l10 5 10-5"/>
+                                            </svg>
+                                            <span>本地大模型</span>
+                                            <span class="arrow">›</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="toolbar-right">
+                                <input type="file" id="fileInput" style="display: none;" multiple>
+                                <button class="action-btn" id="attachBtn" title="上传附件">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+                                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                                        <line x1="12" y1="19" x2="12" y2="22"/>
+                                    </svg>
+                                </button>
+                                <button class="send-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="22" y1="2" x2="11" y2="13"/>
+                                        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="footer-note">内容由AI生成，请仔细甄别</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Agent 项点击切换
+        document.querySelectorAll('.agent-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.agent-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Tab 切换
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 导航项切换 - 点击跳转到对应页面
+        const pageMap = {
+            '对话': 'chat.html',
+            '专家': 'agent.html',
+            '任务': 'scheduled-tasks.html',
+            '知识库': 'knowledge-base.html',
+            '连接': 'channels-ui.html',
+            '设置': 'settings.html'
+        };
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const span = this.querySelector('span');
+                if (!span) return;
+                const text = span.textContent.trim();
+                const target = pageMap[text];
+                if (target) {
+                    window.location.href = target;
+                } else {
+                    document.querySelectorAll('.sidebar .nav-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // 换一换按钮动画
+        document.querySelector('.refresh-btn').addEventListener('click', function() {
+            const svg = this.querySelector('svg');
+            svg.style.transition = 'transform 0.5s';
+            svg.style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                svg.style.transform = 'rotate(0deg)';
+            }, 500);
+        });
+
+        // 输入框焦点效果
+        const inputContainer = document.querySelector('.input-container');
+        const inputEditor = document.querySelector('.input-editor');
+        
+        inputContainer.addEventListener('click', function(e) {
+            // 如果点击的是工具栏按钮，不触发聚焦
+            if (e.target.closest('.input-toolbar') || e.target.closest('button')) {
+                return;
+            }
+            this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+            if (inputEditor) {
+                inputEditor.focus();
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!inputContainer.contains(e.target)) {
+                inputContainer.style.boxShadow = '';
+            }
+        });
+
+        // 输入框焦点事件
+        if (inputEditor) {
+            inputEditor.addEventListener('focus', function() {
+                inputContainer.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+            });
+            
+            inputEditor.addEventListener('blur', function() {
+                inputContainer.style.boxShadow = '';
+            });
+        }
+
+        // 窗口控制按钮
+        document.querySelector('.window-btn.minimize').addEventListener('click', function() {
+            alert('最小化窗口');
+        });
+
+        document.querySelector('.window-btn.maximize').addEventListener('click', function() {
+            alert('最大化/还原窗口');
+        });
+
+        document.querySelector('.window-btn.close').addEventListener('click', function() {
+            if (confirm('确定要关闭应用吗？')) {
+                window.close();
+            }
+        });
+
+        // 附件上传功能
+        (function() {
+            const attachBtn = document.getElementById('attachBtn');
+            const fileInput = document.getElementById('fileInput');
+            const inputContainer = document.querySelector('.input-container');
+            
+            if (attachBtn && fileInput) {
+                attachBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInput.click();
+                });
+            }
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    // 显示已上传文件
+                    let fileListHtml = '<div class="uploaded-files" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        fileListHtml += `
+                            <div class="file-tag" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f0f0f0; border-radius: 6px; font-size: 13px; color: #333;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                <span>${file.name}</span>
+                                <span style="color: #999; font-size: 11px;">(${(file.size / 1024).toFixed(1)} KB)</span>
+                                <button class="delete-btn" onclick="this.parentElement.remove()" title="删除">×</button>
+                            </div>
+                        `;
+                    }
+                    fileListHtml += '</div>';
+                    
+                    // 插入到输入框上方
+                    if (inputContainer) {
+                        const existingFiles = inputContainer.querySelector('.uploaded-files');
+                        if (existingFiles) {
+                            existingFiles.remove();
+                        }
+                        inputContainer.insertAdjacentHTML('afterbegin', fileListHtml);
+                    }
+                }
+            });
+        }
+        })();
+
+        // 模型选择下拉菜单
+        (function() {
+            const modelSelectBtn = document.getElementById('modelSelectBtn');
+            const modelDropdown = document.getElementById('modelDropdown');
+            const selectedModel = document.getElementById('selectedModel');
+            
+            if (modelSelectBtn && modelDropdown) {
+                // 点击按钮切换下拉菜单
+                modelSelectBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    modelDropdown.classList.toggle('show');
+                });
+                
+                // 点击选项选择模型
+                modelDropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const modelName = this.dataset.model;
+                        
+                        // 更新选中状态
+                        modelDropdown.querySelectorAll('.model-dropdown-item').forEach(i => {
+                            i.classList.remove('selected');
+                            const checkmark = i.querySelector('svg:last-child');
+                            if (checkmark) checkmark.style.display = 'none';
+                        });
+                        this.classList.add('selected');
+                        
+                        // 显示对勾
+                        const checkmark = this.querySelector('svg:last-child');
+                        if (checkmark) checkmark.style.display = 'block';
+                        
+                        // 更新按钮文字
+                        selectedModel.textContent = modelName;
+                        
+                        // 关闭下拉菜单
+                        modelDropdown.classList.remove('show');
+                    });
+                });
+                
+                // 点击外部关闭下拉菜单
+                document.addEventListener('click', function() {
+                    modelDropdown.classList.remove('show');
+                });
+                
+                // 初始化：隐藏非选中项的对勾
+                modelDropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                    if (!item.classList.contains('selected')) {
+                        const checkmark = item.querySelector('svg:last-child');
+                        if (checkmark) checkmark.style.display = 'none';
+                    }
+                });
+            }
+        })();
+
+        // Agent 切换功能
+        (function() {
+            const agentItems = document.querySelectorAll('.agent-item');
+            const flowyWelcome = document.getElementById('flowyWelcome');
+            const pmPage = document.getElementById('pmPage');
+            const gameDesignerPage = document.getElementById('gameDesignerPage');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const skillsGrid = document.getElementById('skillsGrid');
+            
+            // 隐藏所有专属页面的辅助函数
+            function hideAllSpecialPages() {
+                if (pmPage) pmPage.style.display = 'none';
+                if (gameDesignerPage) gameDesignerPage.style.display = 'none';
+            }
+            
+            // 显示默认页面的辅助函数
+            function showDefaultPage() {
+                hideAllSpecialPages();
+                if (flowyWelcome) flowyWelcome.style.display = 'block';
+                if (refreshBtn) refreshBtn.style.display = 'flex';
+                if (skillsGrid) skillsGrid.style.display = 'grid';
+            }
+            
+            agentItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // 如果点击的是操作按钮或菜单，不切换页面
+                    if (e.target.closest('.agent-actions') || e.target.closest('.more-menu')) {
+                        return;
+                    }
+                    
+                    // 更新选中状态
+                    agentItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const agentName = this.querySelector('.agent-name').textContent;
+                    
+                    if (agentName === '产品经理') {
+                        // 显示产品经理页面
+                        hideAllSpecialPages();
+                        if (flowyWelcome) flowyWelcome.style.display = 'none';
+                        if (refreshBtn) refreshBtn.style.display = 'none';
+                        if (skillsGrid) skillsGrid.style.display = 'none';
+                        if (pmPage) pmPage.style.display = 'flex';
+                    } else if (agentName === '游戏设计师') {
+                        // 显示游戏设计师页面
+                        hideAllSpecialPages();
+                        if (flowyWelcome) flowyWelcome.style.display = 'none';
+                        if (refreshBtn) refreshBtn.style.display = 'none';
+                        if (skillsGrid) skillsGrid.style.display = 'none';
+                        if (gameDesignerPage) gameDesignerPage.style.display = 'flex';
+                    } else if (agentName === 'AI助手') {
+                        // 显示 AI助手 默认页面
+                        showDefaultPage();
+                    } else {
+                        // 其他 Agent 显示默认页面
+                        showDefaultPage();
+                    }
+                });
+            });
+        })();
+
+        // Agent 历史记录展开功能
+        (function() {
+            const agentWrappers = document.querySelectorAll('.agent-item-wrapper');
+            
+            agentWrappers.forEach(wrapper => {
+                const toggleBtn = wrapper.querySelector('.toggle-btn');
+                const moreBtn = wrapper.querySelector('.more-btn');
+                const history = wrapper.querySelector('.agent-history');
+                const moreMenu = wrapper.querySelector('.more-menu');
+                
+                // 点击展开/收起按钮
+                if (toggleBtn && history) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        history.classList.toggle('expanded');
+                        
+                        // 旋转箭头图标
+                        const svg = this.querySelector('svg');
+                        if (history.classList.contains('expanded')) {
+                            svg.style.transform = 'rotate(180deg)';
+                        } else {
+                            svg.style.transform = 'rotate(0deg)';
+                        }
+                        svg.style.transition = 'transform 0.2s';
+                    });
+                }
+                
+                // 点击更多按钮
+                if (moreBtn && moreMenu) {
+                    moreBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // 关闭其他菜单
+                        document.querySelectorAll('.more-menu').forEach(menu => {
+                            if (menu !== moreMenu) menu.classList.remove('show');
+                        });
+                        moreMenu.classList.toggle('show');
+                    });
+                }
+                
+                // 点击菜单项
+                if (moreMenu) {
+                    moreMenu.querySelectorAll('.more-menu-item').forEach(item => {
+                        item.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const text = this.querySelector('span').textContent;
+                            console.log('点击了：' + text);
+                            moreMenu.classList.remove('show');
+                        });
+                    });
+                }
+            });
+            
+            // 点击外部关闭菜单
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.more-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            });
+        })();
+
+        // 对话消息功能
+        (function() {
+            const chatMessages = document.getElementById('chatMessages');
+            const contentArea = document.getElementById('contentArea');
+            const flowyWelcome = document.getElementById('flowyWelcome');
+            const skillsGrid = document.getElementById('skillsGrid');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const inputEditor = document.querySelector('.input-editor');
+
+            // 显示对话区域，隐藏欢迎页面
+            function showChatArea() {
+                chatMessages.classList.add('active');
+                if (flowyWelcome) flowyWelcome.style.display = 'none';
+                if (skillsGrid) skillsGrid.style.display = 'none';
+                if (refreshBtn) refreshBtn.style.display = 'none';
+                // 滚动到底部
+                setTimeout(() => {
+                    contentArea.scrollTop = contentArea.scrollHeight;
+                }, 100);
+            }
+
+            // 添加用户消息
+            function addUserMessage(text) {
+                const messageHtml = `
+                    <div class="message-user">
+                        <div class="message-user-content">${escapeHtml(text)}</div>
+                        <div class="message-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                    </div>
+                `;
+                chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+                contentArea.scrollTop = contentArea.scrollHeight;
+            }
+
+            // 添加 AI 消息
+            function addAiMessage(htmlContent) {
+                const messageHtml = `
+                    <div class="message-ai">
+                        <div class="message-avatar" style="background: #000000; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-weight: bold; font-size: 14px;">F</span>
+                        </div>
+                        <div class="message-ai-content">
+                            <div class="message-ai-text">${htmlContent}</div>
+                            <div class="message-actions">
+                                <button class="message-action-btn" title="复制">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="点赞">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="点踩">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="重新生成">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"/>
+                                        <polyline points="1 20 1 14 7 14"/>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="朗读">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="分享">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="18" cy="5" r="3"/>
+                                        <circle cx="6" cy="12" r="3"/>
+                                        <circle cx="18" cy="19" r="3"/>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+                contentArea.scrollTop = contentArea.scrollHeight;
+            }
+
+            // 转义 HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Skill 安装回复内容
+            const skillReplyContent = `
+                <p>Skill 就是给 AI Agent 装上的「专项能力」，不同的 Skill 让 Agent 能做不同的事情。就好比一个人本来只会说话，装了不同的 Skill 之后：</p>
+                <div class="skill-examples">
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">☁️</span>
+                        <span>装了「天气 Skill」→ 能实时查天气</span>
+                    </div>
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">📁</span>
+                        <span>装了「文件 Skill」→ 能读写各种文档</span>
+                    </div>
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">💻</span>
+                        <span>装了「代码 Skill」→ 能写程序、跑代码</span>
+                    </div>
+                </div>
+                <p>👇 Skills的类型有很多，让我为你举个例子：</p>
+                <div class="skill-type-section">
+                    <div class="skill-type-title">
+                        <span class="skill-type-icon">📁</span>
+                        <span>文件读写类</span>
+                    </div>
+                    <div class="skill-type-desc">
+                        文件阅读：把 PDF、Word、Excel、TXT 丢给它，它帮你读懂里面写了什么<br>
+                        看图理解：把图片发给它，它能看懂图里的内容，比如识别表格截图、分析图表
+                    </div>
+                </div>
+                <p>✨ <strong>怎么安装？说句话就行，啥都不用管！</strong></p>
+                <p>你不需要手动去找、去装任何 Skill。只要把你想做的事用大白话说清楚，QClaw 就会自动识别当前任务需要哪些 Skill，并在后台悄悄完成安装，全程无感，立刻开干。</p>
+                <div class="skill-cards-grid">
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">实时天气 Skill</div>
+                        <div class="skill-card-mini-desc">安装Weather技能</div>
+                    </div>
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">文件处理 Skill</div>
+                        <div class="skill-card-mini-desc">安装docx技能</div>
+                    </div>
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">代码开发 Skill</div>
+                        <div class="skill-card-mini-desc">安装GitHub技能</div>
+                    </div>
+                </div>
+            `;
+
+            // 点击 Skill 卡片
+            document.querySelectorAll('.skill-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const title = this.querySelector('.skill-title').textContent;
+                    
+                    if (title === '安装你的第一个Skill') {
+                        showChatArea();
+                        addUserMessage('请解释什么是skill？说明如何安装skill？');
+                        
+                        // 模拟 AI 回复延迟
+                        setTimeout(() => {
+                            addAiMessage(skillReplyContent);
+                        }, 800);
+                    }
+                });
+            });
+
+            // 输入框发送消息
+            if (inputEditor) {
+                inputEditor.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const text = this.textContent.trim();
+                        if (text) {
+                            showChatArea();
+                            addUserMessage(text);
+                            this.textContent = '';
+                            
+                            // 模拟 AI 回复
+                            setTimeout(() => {
+                                addAiMessage('<p>收到你的消息：' + escapeHtml(text) + '</p><p>我是 Flowy，很高兴为你服务！</p>');
+                            }, 800);
+                        }
+                    }
+                });
+            }
+        })();
+
+        // 历史记录项菜单功能
+        function toggleHistoryItemMenu(event, btn) {
+            event.stopPropagation();
+            const menu = btn.nextElementSibling;
+            
+            // 关闭其他所有菜单
+            document.querySelectorAll('.history-item-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            
+            // 切换当前菜单
+            menu.classList.toggle('show');
+        }
+
+        // 编辑历史记录名称
+        function editHistoryItemName(event, item) {
+            event.stopPropagation();
+            const historyItem = item.closest('.history-item');
+            const textSpan = historyItem.querySelector('.history-item-text');
+            const currentText = textSpan.textContent;
+            
+            // 创建输入框
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.style.cssText = 'flex: 1; border: none; background: transparent; font-size: 12px; color: var(--text-primary); outline: none; padding: 0;';
+            
+            textSpan.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            // 隐藏菜单
+            item.closest('.history-item-menu').classList.remove('show');
+            
+            // 保存编辑
+            function saveEdit() {
+                const newText = input.value.trim() || currentText;
+                const newSpan = document.createElement('span');
+                newSpan.className = 'history-item-text';
+                newSpan.textContent = newText;
+                input.replaceWith(newSpan);
+            }
+            
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+            });
+        }
+
+        // 删除历史记录
+        function deleteHistoryItem(event, item) {
+            event.stopPropagation();
+            const historyItem = item.closest('.history-item');
+            
+            // 隐藏菜单
+            item.closest('.history-item-menu').classList.remove('show');
+            
+            // 删除动画
+            historyItem.style.transition = 'all 0.2s';
+            historyItem.style.opacity = '0';
+            historyItem.style.transform = 'translateX(-10px)';
+            
+            setTimeout(() => {
+                historyItem.remove();
+            }, 200);
+        }
+
+        // 点击外部关闭历史记录项菜单
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.history-item-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        });
+    </script>
+</body>
+</html>

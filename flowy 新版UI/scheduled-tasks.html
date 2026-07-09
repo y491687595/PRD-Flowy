@@ -1,0 +1,2317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowyAIPC - 定时任务</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-outer: #F3F4F6;
+            --bg-window: #ffffff;
+            --bg-sidebar: #ffffff;
+            --bg-main: #ffffff;
+            --bg-hover: #f5f5f5;
+            --bg-selected: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f97316;
+            --accent-green: #22c55e;
+            --accent-blue: #3b82f6;
+            --accent-red: #ef4444;
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-outer);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 外层容器 - 浮动窗口 */
+        .app-window {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 900px;
+            background: var(--bg-window);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Windows 标题栏 */
+        .title-bar {
+            height: 40px;
+            background: var(--bg-window);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 0 20px;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .title-bar-icon {
+            width: 20px;
+            height: 20px;
+            background: #000000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-btn {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .window-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .window-btn.close:hover {
+            background: #e81123;
+            color: white;
+        }
+
+        .window-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* 主内容区 */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+            gap: 12px;
+        }
+
+        /* 左侧区域 */
+        .left-panel {
+            display: flex;
+            height: 100%;
+            gap: 12px;
+            background: transparent;
+        }
+
+        /* 左侧窄边栏 */
+        .sidebar {
+            width: 56px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            flex-shrink: 0;
+            border-radius: 16px;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-selected);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        /* RPA 标签 */
+        .rpa-badge {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+            font-size: 7px;
+            font-weight: 700;
+            padding: 1px 3px;
+            border-radius: 3px;
+            line-height: 1;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* 右侧主内容区 - 定时任务 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 顶部操作栏 */
+        .task-header {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 12px 20px;
+            gap: 12px;
+        }
+
+        .header-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+        }
+
+        .header-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .header-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .header-btn.primary {
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+            color: white;
+        }
+
+        .header-btn.primary:hover {
+            background: linear-gradient(135deg, #ff5252, #ff7979);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+        }
+
+        .header-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .header-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .header-icon-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .header-icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .header-icon-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* 定时任务内容区 */
+        .task-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 60px;
+            overflow-y: auto;
+        }
+
+        /* 中央图标 */
+        .task-center-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            overflow: hidden;
+        }
+
+        .task-center-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 模板图标 */
+        .template-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .template-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 标题 */
+        .task-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        /* 副标题 */
+        .task-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        /* 模板卡片网格 */
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            width: 100%;
+            max-width: 720px;
+            margin-bottom: 32px;
+        }
+
+        .template-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 18px 20px;
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .template-card:hover {
+            border-color: #ff6b6b;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .template-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .template-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .template-icon.icon-red {
+            background: #fff0f0;
+            color: #ff6b6b;
+        }
+
+        .template-icon.icon-orange {
+            background: #fff5f0;
+            color: #ff8c42;
+        }
+
+        .template-icon.icon-green {
+            background: #f0fff4;
+            color: #22c55e;
+        }
+
+        .template-icon.icon-blue {
+            background: #f0f5ff;
+            color: #3b82f6;
+        }
+
+        .template-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .template-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .template-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .template-arrow {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            opacity: 0;
+            transition: all 0.2s;
+        }
+
+        .template-card:hover .template-arrow {
+            opacity: 1;
+            color: #ff6b6b;
+        }
+
+        /* 自定义创建按钮 */
+        .create-custom-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 32px;
+            background: #2d3748;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .create-custom-btn:hover {
+            background: #1a202c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .create-custom-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* 任务列表页面 */
+        .task-list-page {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 32px;
+            overflow-y: auto;
+        }
+
+        .task-list-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .task-list-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .task-list-title svg {
+            color: var(--text-secondary);
+        }
+
+        .create-task-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 20px;
+            background: #2d3748;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .create-task-btn:hover {
+            background: #1a202c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .create-task-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        /* 任务列表 */
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .task-item {
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 20px 24px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .task-item:hover {
+            border-color: #d0d0d0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .task-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .task-item-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .task-item-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .task-item-desc {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .task-item-footer {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+
+        .task-item-time {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .task-item-time svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .task-item-status {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .task-item-status svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 任务开关 */
+        .task-toggle {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 22px;
+            cursor: pointer;
+        }
+
+        .task-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .task-toggle-slider {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #e2e8f0;
+            border-radius: 22px;
+            transition: background 0.3s;
+        }
+
+        .task-toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .task-toggle input:checked + .task-toggle-slider {
+            background: #22c55e;
+        }
+
+        .task-toggle input:checked + .task-toggle-slider::before {
+            transform: translateX(18px);
+        }
+
+        /* 任务更多操作 */
+        .task-more {
+            position: relative;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .task-more:hover {
+            background: #f3f4f6;
+        }
+
+        .task-more svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-tertiary);
+        }
+
+        .task-more-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            min-width: 120px;
+            display: none;
+            padding: 4px 0;
+        }
+
+        .task-more-menu.active {
+            display: block;
+        }
+
+        .task-more-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            margin: 0 6px;
+            font-size: 13px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 6px;
+        }
+
+        .task-more-item:hover {
+            background: #f3f4f6;
+        }
+
+        .task-more-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 4px 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0b0b0;
+        }
+        /* 弹窗遮罩层 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            overflow-y: auto;
+            padding: 40px 0;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        /* 弹窗容器 */
+        .modal-container {
+            background: #ffffff;
+            border-radius: 20px;
+            width: 560px;
+            max-height: 85vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+            position: relative;
+            scrollbar-gutter: stable;
+            margin: auto;
+        }
+
+        .modal-overlay.active .modal-container {
+            transform: translateY(0);
+        }
+
+        /* 弹窗头部 */
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 28px 0;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .modal-close:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .modal-close svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* 弹窗内容 */
+        .modal-body {
+            padding: 20px 28px;
+        }
+
+        /* 表单组 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #ef4444;
+            margin-right: 4px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: #f8fafc;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+
+        /* 下拉选择框 */
+        .form-select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: #f8fafc;
+            transition: all 0.2s;
+            font-family: inherit;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* 两列布局 */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* 执行时间区域 */
+        .time-section {
+            margin-bottom: 20px;
+        }
+
+        .time-tabs {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 16px;
+        }
+
+        .time-tab {
+            flex: 1;
+            padding: 8px 0;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            text-align: center;
+        }
+
+        .time-tab:hover {
+            color: var(--text-primary);
+        }
+
+        .time-tab.active {
+            background: #ffffff;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .time-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .time-input {
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: #ffffff;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .time-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        /* 时间配置行 */
+        .time-config {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .time-config-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .time-display {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            padding: 6px 0;
+        }
+
+        .time-picker {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 13px;
+            background: #ffffff;
+        }
+
+        .time-picker:hover {
+            border-color: #cbd5e1;
+            color: var(--text-primary);
+        }
+
+        .time-picker svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 星期选择 */
+        .weekdays {
+            display: flex;
+            gap: 6px;
+        }
+
+        .weekday-btn {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: var(--text-secondary);
+            font-family: inherit;
+        }
+
+        .weekday-btn:hover {
+            border-color: #cbd5e1;
+            color: var(--text-primary);
+        }
+
+        .weekday-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+
+        /* 任务指令 */
+        .prompt-section {
+            margin-bottom: 20px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: #f8fafc;
+            transition: all 0.2s;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        /* 高级设置 */
+        .advanced-settings {
+            margin-bottom: 20px;
+        }
+
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .advanced-toggle svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.2s;
+        }
+
+        .advanced-toggle.expanded svg {
+            transform: rotate(180deg);
+        }
+
+        .advanced-content {
+            display: none;
+            padding: 0;
+        }
+
+        .advanced-content.expanded {
+            display: block;
+        }
+
+        .advanced-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* 弹窗底部按钮 */
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            padding: 0 28px 24px;
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .btn-cancel:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .btn-save {
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: #3b82f6;
+            color: white;
+            font-family: inherit;
+        }
+
+        .btn-save:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* 专家选择器 */
+        .expert-select-wrapper {
+            position: relative;
+        }
+
+        .expert-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+        }
+
+        .expert-select-trigger:hover {
+            border-color: #cbd5e1;
+            background: #ffffff;
+        }
+
+        .expert-selected {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .expert-avatar {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .expert-arrow {
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+            transition: transform 0.2s;
+        }
+
+        .expert-select-wrapper.active .expert-arrow {
+            transform: rotate(180deg);
+        }
+
+        .expert-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            max-height: 240px;
+            overflow-y: auto;
+            display: none;
+            padding: 6px 0;
+        }
+
+        .expert-dropdown.active {
+            display: block;
+        }
+
+        .expert-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: var(--text-primary);
+            border-radius: 8px;
+            margin: 0 6px;
+        }
+
+        .expert-option:hover {
+            background: #f3f4f6;
+        }
+
+        .channel-icon {
+            width: 20px;
+            height: 20px;
+            color: #07c160;
+        }
+
+        .channel-icon.dingtalk {
+            color: #3370ff;
+        }
+
+        .channel-icon.feishu {
+            color: #3370ff;
+        }
+
+        .account-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--text-secondary);
+        }
+
+        .expert-option .account-icon {
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-window">
+        <!-- Windows 标题栏 -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <div class="title-bar-icon">F</div>
+                <span>FlowyAIPC</span>
+            </div>
+            <div class="window-controls">
+                <button class="window-btn minimize" title="最小化">
+                    <svg viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1" y="5.5" width="10" height="1"></rect>
+                    </svg>
+                </button>
+                <button class="window-btn maximize" title="最大化">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="1.5" y="1.5" width="9" height="9"></rect>
+                    </svg>
+                </button>
+                <button class="window-btn close" title="关闭">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M1 1l10 10M11 1L1 11"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 主内容区 -->
+        <div class="app-container">
+            <!-- 左侧边栏 -->
+            <div class="left-panel">
+                <aside class="sidebar">
+                    <div class="sidebar-top">
+                        <div class="user-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                        <nav class="nav-menu">
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>对话</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                <span>任务</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                <span>知识库</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <span>连接</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span>会议</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                <span>AI视频</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='skill.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>技能</span>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="sidebar-bottom">
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            <span>社区</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 右侧主内容区 - 定时任务 -->
+            <main class="main-content">
+                <!-- 定时任务内容 - 初始页面 -->
+                <div class="task-content" id="initialContent">
+                    <!-- 中央图标 -->
+                    <div class="task-center-icon">
+                        <img src="task-picture/canlender.png" alt="定时任务">
+                    </div>
+
+                    <!-- 标题 -->
+                    <h1 class="task-title">选择下方模板，开启你的第一个定时任务</h1>
+
+                    <!-- 副标题 -->
+                    <p class="task-subtitle">定时任务可以让 AI 助手在指定时间自动执行任务，例如发送日报、监控行情、定期汇总信息等</p>
+
+                    <!-- 模板卡片 -->
+                    <div class="template-grid">
+                        <div class="template-card" onclick="openTemplateModal('每日行业资讯简报', '新闻情台', '搜集 [AI / 科技 / 财经 / 教育] 等行业的最新动态，5条核心新闻', '08:30', [0,1,2,3,4])">
+                            <div class="template-icon">
+                                <img src="task-picture/note.png" alt="每日行业资讯简报">
+                            </div>
+                            <div class="template-info">
+                                <div class="template-name">每日行业资讯简报</div>
+                                <div class="template-desc">[每天 8:30] 自动搜集 [AI / 科技 / 财经 / 教育] 等行业的最新动态，5条核心新闻</div>
+                            </div>
+                            <div class="template-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="template-card">
+                            <div class="template-icon">
+                                <img src="task-picture/stock.png" alt="每日基金/股票推荐">
+                            </div>
+                            <div class="template-info">
+                                <div class="template-name">每日基金/股票推荐</div>
+                                <div class="template-desc">[每日 08:00] 结合市场行情，推荐今日值得关注的 2 只基金或股票，附上理由</div>
+                            </div>
+                            <div class="template-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="template-card">
+                            <div class="template-icon">
+                                <img src="task-picture/edit.png" alt="每周内容选题建议">
+                            </div>
+                            <div class="template-info">
+                                <div class="template-name">每周内容选题建议</div>
+                                <div class="template-desc">[每周一 10:00] 结合热点，自动生成 3-5 个本周可以写的选题方向</div>
+                            </div>
+                            <div class="template-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+
+                        <div class="template-card">
+                            <div class="template-icon">
+                                <img src="task-picture/to do.png" alt="每日代办完成度检查">
+                            </div>
+                            <div class="template-info">
+                                <div class="template-name">每日代办完成度检查</div>
+                                <div class="template-desc">【每日 21:00】检查今天的目标完成情况，提醒明天的待办事项</div>
+                            </div>
+                            <div class="template-arrow">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <path d="M5 12h14M12 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 自定义创建按钮 -->
+                    <button class="create-custom-btn" onclick="openModal()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"></path>
+                        </svg>
+                        自定义创建
+                    </button>
+                </div>
+
+                <!-- 定时任务列表页面 -->
+                <div class="task-list-page" id="taskListPage" style="display: none;">
+                    <!-- 页面头部 -->
+                    <div class="task-list-header">
+                        <div class="task-list-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>定时任务</span>
+                        </div>
+                        <button class="create-task-btn" onclick="openModal()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                <path d="M12 5v14M5 12h14"></path>
+                            </svg>
+                            创建任务
+                        </button>
+                    </div>
+
+                    <!-- 任务列表 -->
+                    <div class="task-list" id="taskList">
+                        <!-- 任务项将通过JavaScript动态添加 -->
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 创建定时任务弹窗 -->
+    <div class="modal-overlay" id="createTaskModal">
+        <div class="modal-container">
+            <!-- 弹窗头部 -->
+            <div class="modal-header">
+                <h2 class="modal-title">创建定时任务</h2>
+                <button class="modal-close" onclick="closeModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- 弹窗内容 -->
+            <div class="modal-body">
+                <!-- 任务名称和执行专家 -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span>任务名称</label>
+                        <input type="text" class="form-input" placeholder="请输入任务名称">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><span class="required">*</span>执行专家</label>
+                        <div class="expert-select-wrapper">
+                            <div class="expert-select-trigger" onclick="toggleExpertDropdown()">
+                                <div class="expert-selected" id="expertSelected">
+                                    <img src="avater/image 326.png" alt="QClaw" class="expert-avatar">
+                                    <span>QClaw</span>
+                                </div>
+                                <svg class="expert-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                            <div class="expert-dropdown" id="expertDropdown">
+                                <div class="expert-option" onclick="selectExpert('QClaw', 'avater/image 326.png')">
+                                    <img src="avater/image 326.png" alt="QClaw" class="expert-avatar">
+                                    <span>QClaw</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('高考志愿填报顾问', 'avater/image 327.png')">
+                                    <img src="avater/image 327.png" alt="高考志愿填报顾问" class="expert-avatar">
+                                    <span>高考志愿填报顾问</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('Notion专家', 'avater/image 328.png')">
+                                    <img src="avater/image 328.png" alt="Notion专家" class="expert-avatar">
+                                    <span>Notion专家</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('小红书爆款操盘手', 'avater/image 329.png')">
+                                    <img src="avater/image 329.png" alt="小红书爆款操盘手" class="expert-avatar">
+                                    <span>小红书爆款操盘手</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('短视频剪辑指导师', 'avater/image 330.png')">
+                                    <img src="avater/image 330.png" alt="短视频剪辑指导师" class="expert-avatar">
+                                    <span>短视频剪辑指导师</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('游戏设计师', 'avater/image 331.png')">
+                                    <img src="avater/image 331.png" alt="游戏设计师" class="expert-avatar">
+                                    <span>游戏设计师</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('产品经理', 'avater/image 332.png')">
+                                    <img src="avater/image 332.png" alt="产品经理" class="expert-avatar">
+                                    <span>产品经理</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('Notion专家', 'avater/image 333.png')">
+                                    <img src="avater/image 333.png" alt="Notion专家" class="expert-avatar">
+                                    <span>Notion专家</span>
+                                </div>
+                                <div class="expert-option" onclick="selectExpert('AI助手', 'avater/image 334.png')">
+                                    <img src="avater/image 334.png" alt="AI助手" class="expert-avatar">
+                                    <span>AI助手</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 任务指令 -->
+                <div class="form-group">
+                    <label class="form-label"><span class="required">*</span>任务指令</label>
+                    <textarea class="form-textarea" placeholder="请输入任务指令"></textarea>
+                </div>
+
+                <!-- 执行时间 -->
+                <div class="time-section">
+                    <label class="form-label"><span class="required">*</span>执行时间</label>
+                    <div class="time-tabs">
+                        <button class="time-tab active" data-tab="daily">每天</button>
+                        <button class="time-tab" data-tab="interval">按间隔</button>
+                        <button class="time-tab" data-tab="once">按单次</button>
+                    </div>
+                    <div class="time-config" id="timeConfig">
+                        <div class="time-input-wrapper">
+                            <input type="time" class="time-input" value="16:22">
+                        </div>
+                        <div class="weekdays">
+                            <button class="weekday-btn">周一</button>
+                            <button class="weekday-btn">周二</button>
+                            <button class="weekday-btn">周三</button>
+                            <button class="weekday-btn">周四</button>
+                            <button class="weekday-btn">周五</button>
+                            <button class="weekday-btn">周六</button>
+                            <button class="weekday-btn">周日</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 高级设置 -->
+                <div class="advanced-settings">
+                    <div class="advanced-row">
+                        <div class="form-group">
+                            <label class="form-label">远控通道</label>
+                            <div class="expert-select-wrapper" id="channelWrapper">
+                                <div class="expert-select-trigger" onclick="toggleChannelDropdown()">
+                                    <div class="expert-selected" id="channelSelected">
+                                        <svg class="channel-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.269-.03-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+                                        </svg>
+                                        <span>微信</span>
+                                    </div>
+                                    <svg class="expert-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="expert-dropdown" id="channelDropdown">
+                                    <div class="expert-option" onclick="selectChannel('微信', 'wechat')">
+                                        <svg class="channel-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.269-.03-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/>
+                                        </svg>
+                                        <span>微信</span>
+                                    </div>
+                                    <div class="expert-option" onclick="selectChannel('钉钉', 'dingtalk')">
+                                        <svg class="channel-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12.15 2.1c-2.2 0-4.2.9-5.6 2.4-1.5 1.5-2.4 3.5-2.4 5.6 0 2.2.9 4.2 2.4 5.6 1.5 1.5 3.5 2.4 5.6 2.4 2.2 0 4.2-.9 5.6-2.4 1.5-1.5 2.4-3.5 2.4-5.6 0-2.2-.9-4.2-2.4-5.6-1.4-1.5-3.4-2.4-5.6-2.4zm0 1.8c1.6 0 3.1.7 4.2 1.8 1.1 1.1 1.8 2.6 1.8 4.2 0 1.6-.7 3.1-1.8 4.2-1.1 1.1-2.6 1.8-4.2 1.8-1.6 0-3.1-.7-4.2-1.8-1.1-1.1-1.8-2.6-1.8-4.2 0-1.6.7-3.1 1.8-4.2 1.1-1.1 2.6-1.8 4.2-1.8z"/>
+                                        </svg>
+                                        <span>钉钉</span>
+                                    </div>
+                                    <div class="expert-option" onclick="selectChannel('飞书', 'feishu')">
+                                        <svg class="channel-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                        </svg>
+                                        <span>飞书</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">发送账号</label>
+                            <div class="expert-select-wrapper" id="accountWrapper">
+                                <div class="expert-select-trigger" onclick="toggleAccountDropdown()">
+                                    <div class="expert-selected" id="accountSelected">
+                                        <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>账号1</span>
+                                    </div>
+                                    <svg class="expert-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                </div>
+                                <div class="expert-dropdown" id="accountDropdown">
+                                    <div class="expert-option" onclick="selectAccount('账号1')">
+                                        <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>账号1</span>
+                                    </div>
+                                    <div class="expert-option" onclick="selectAccount('账号2')">
+                                        <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>账号2</span>
+                                    </div>
+                                    <div class="expert-option" onclick="selectAccount('账号3')">
+                                        <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>账号3</span>
+                                    </div>
+                                    <div class="expert-option" onclick="selectAccount('账号4')">
+                                        <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                                        </svg>
+                                        <span>账号4</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 弹窗底部 -->
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-save" onclick="saveTask()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 打开弹窗
+        function openModal() {
+            document.getElementById('createTaskModal').classList.add('active');
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('createTaskModal').classList.remove('active');
+        }
+
+        // 保存任务并跳转到任务列表
+        function saveTask() {
+            // 获取表单数据
+            const taskName = document.querySelector('.modal-body .form-row .form-group:first-child .form-input')?.value || '未命名任务';
+            const expertName = document.querySelector('#expertSelected span')?.textContent || 'main';
+            const prompt = document.querySelector('.form-textarea')?.value || '';
+            const time = document.querySelector('.time-input')?.value || '08:30';
+            
+            // 获取选中的星期
+            const weekdayBtns = document.querySelectorAll('.weekday-btn');
+            const weekdays = [];
+            weekdayBtns.forEach((btn, index) => {
+                if (btn.classList.contains('active')) {
+                    weekdays.push(index);
+                }
+            });
+            
+            // 创建任务对象
+            const task = {
+                id: Date.now(),
+                name: taskName,
+                expert: expertName,
+                prompt: prompt,
+                time: time,
+                weekdays: weekdays,
+                enabled: true
+            };
+            
+            // 添加到任务列表
+            tasks.push(task);
+            
+            // 关闭弹窗
+            closeModal();
+            
+            // 切换到任务列表页面
+            showTaskListPage();
+            
+            // 渲染任务列表
+            renderTaskList();
+        }
+
+        // 任务数据
+        let tasks = [];
+
+        // 显示任务列表页面
+        function showTaskListPage() {
+            document.getElementById('initialContent').style.display = 'none';
+            document.getElementById('taskListPage').style.display = 'flex';
+        }
+
+        // 显示初始页面
+        function showInitialPage() {
+            document.getElementById('initialContent').style.display = 'flex';
+            document.getElementById('taskListPage').style.display = 'none';
+        }
+
+        // 渲染任务列表
+        function renderTaskList() {
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = '';
+            
+            tasks.forEach(task => {
+                const taskItem = document.createElement('div');
+                taskItem.className = 'task-item';
+                taskItem.innerHTML = `
+                    <div class="task-item-header">
+                        <div class="task-item-name">
+                            ${task.name}
+                            <span class="task-item-tag">${task.expert}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label class="task-toggle">
+                                <input type="checkbox" ${task.enabled ? 'checked' : ''} onchange="toggleTask(${task.id})">
+                                <span class="task-toggle-slider"></span>
+                            </label>
+                            <div class="task-more" onclick="toggleTaskMore(this)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                                <div class="task-more-menu">
+                                    <div class="task-more-item" onclick="executeTask(${task.id})">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                        </svg>
+                                        执行一次
+                                    </div>
+                                    <div class="task-more-item" onclick="editTask(${task.id})">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                        编辑
+                                    </div>
+                                    <div class="task-more-item" onclick="deleteTask(${task.id})">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                        删除
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="task-item-desc">${task.prompt}</div>
+                    <div class="task-item-footer">
+                        <div class="task-item-time">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            工作日 ${task.time}
+                        </div>
+                        <div class="task-item-status">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            上次：未执行
+                        </div>
+                    </div>
+                `;
+                taskList.appendChild(taskItem);
+            });
+        }
+
+        // 切换任务启用状态
+        function toggleTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.enabled = !task.enabled;
+            }
+        }
+
+        // 切换更多菜单
+        function toggleTaskMore(element) {
+            const menu = element.querySelector('.task-more-menu');
+            menu.classList.toggle('active');
+        }
+
+        // 执行任务
+        function executeTask(taskId) {
+            console.log('执行任务：' + taskId);
+        }
+
+        // 编辑任务
+        function editTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            // 关闭更多菜单
+            document.querySelectorAll('.task-more-menu').forEach(menu => {
+                menu.classList.remove('active');
+            });
+            
+            // 打开弹窗
+            document.getElementById('createTaskModal').classList.add('active');
+            
+            // 填充任务数据
+            const taskInput = document.querySelector('.modal-body .form-row .form-group:first-child .form-input');
+            if (taskInput) taskInput.value = task.name;
+            
+            // 填充任务指令
+            const textarea = document.querySelector('.form-textarea');
+            if (textarea) textarea.value = task.prompt;
+            
+            // 设置时间
+            const timeInput = document.querySelector('.time-input');
+            if (timeInput) timeInput.value = task.time;
+            
+            // 设置执行专家
+            const expertSelected = document.getElementById('expertSelected');
+            if (expertSelected && task.expert) {
+                // 查找匹配的专家头像
+                const expertOptions = document.querySelectorAll('#expertDropdown .expert-option');
+                let found = false;
+                expertOptions.forEach(option => {
+                    const span = option.querySelector('span');
+                    const img = option.querySelector('img');
+                    if (span && span.textContent === task.expert && img) {
+                        expertSelected.innerHTML = `<img src="${img.src}" alt="${task.expert}" class="expert-avatar"><span>${task.expert}</span>`;
+                        found = true;
+                    }
+                });
+                if (!found) {
+                    expertSelected.innerHTML = `<span>${task.expert}</span>`;
+                }
+            }
+            
+            // 设置星期按钮
+            const weekdayBtns = document.querySelectorAll('.weekday-btn');
+            weekdayBtns.forEach((btn, index) => {
+                if (task.weekdays && task.weekdays.includes(index)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // 修改弹窗标题为编辑模式
+            const modalTitle = document.querySelector('.modal-title');
+            if (modalTitle) modalTitle.textContent = '编辑定时任务';
+            
+            // 修改保存按钮为更新
+            const saveBtn = document.querySelector('.btn-save');
+            if (saveBtn) {
+                saveBtn.textContent = '更新';
+                saveBtn.onclick = function() {
+                    updateTask(taskId);
+                };
+            }
+        }
+
+        // 更新任务
+        function updateTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            
+            // 获取表单数据
+            const taskName = document.querySelector('.modal-body .form-row .form-group:first-child .form-input')?.value || '未命名任务';
+            const expertName = document.querySelector('#expertSelected span')?.textContent || 'main';
+            const prompt = document.querySelector('.form-textarea')?.value || '';
+            const time = document.querySelector('.time-input')?.value || '08:30';
+            
+            // 获取选中的星期
+            const weekdayBtns = document.querySelectorAll('.weekday-btn');
+            const weekdays = [];
+            weekdayBtns.forEach((btn, index) => {
+                if (btn.classList.contains('active')) {
+                    weekdays.push(index);
+                }
+            });
+            
+            // 更新任务数据
+            task.name = taskName;
+            task.expert = expertName;
+            task.prompt = prompt;
+            task.time = time;
+            task.weekdays = weekdays;
+            
+            // 关闭弹窗
+            closeModal();
+            
+            // 恢复弹窗标题和按钮
+            const modalTitle = document.querySelector('.modal-title');
+            if (modalTitle) modalTitle.textContent = '创建定时任务';
+            
+            const saveBtn = document.querySelector('.btn-save');
+            if (saveBtn) {
+                saveBtn.textContent = '创建';
+                saveBtn.onclick = saveTask;
+            }
+            
+            // 重新渲染任务列表
+            renderTaskList();
+        }
+
+        // 删除任务
+        function deleteTask(taskId) {
+            tasks = tasks.filter(t => t.id !== taskId);
+            renderTaskList();
+        }
+
+        // 点击外部关闭更多菜单
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.task-more-menu').forEach(menu => {
+                if (!menu.parentElement.contains(e.target)) {
+                    menu.classList.remove('active');
+                }
+            });
+        });
+
+        // 切换高级设置
+        function toggleAdvanced() {
+            // 高级设置已固定展开，无需切换
+        }
+
+        // 切换发送账号下拉框
+        function toggleAccountDropdown() {
+            const wrapper = document.getElementById('accountWrapper');
+            const dropdown = document.getElementById('accountDropdown');
+            wrapper.classList.toggle('active');
+            dropdown.classList.toggle('active');
+        }
+
+        // 选择发送账号
+        function selectAccount(name) {
+            const selected = document.getElementById('accountSelected');
+            selected.innerHTML = `
+                <svg class="account-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span>${name}</span>
+            `;
+            toggleAccountDropdown();
+        }
+
+        // 点击外部关闭发送账号下拉框
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('accountWrapper');
+            const dropdown = document.getElementById('accountDropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // 切换远控通道下拉框
+        function toggleChannelDropdown() {
+            const wrapper = document.getElementById('channelWrapper');
+            const dropdown = document.getElementById('channelDropdown');
+            wrapper.classList.toggle('active');
+            dropdown.classList.toggle('active');
+        }
+
+        // 选择远控通道
+        function selectChannel(name, type) {
+            const selected = document.getElementById('channelSelected');
+            let iconClass = 'channel-icon';
+            if (type === 'dingtalk') iconClass += ' dingtalk';
+            if (type === 'feishu') iconClass += ' feishu';
+            
+            let iconSvg = '';
+            if (type === 'wechat') {
+                iconSvg = `<svg class="${iconClass}" viewBox="0 0 24 24" fill="currentColor"><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.269-.03-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/></svg>`;
+            } else if (type === 'dingtalk') {
+                iconSvg = `<svg class="${iconClass}" viewBox="0 0 24 24" fill="currentColor"><path d="M12.15 2.1c-2.2 0-4.2.9-5.6 2.4-1.5 1.5-2.4 3.5-2.4 5.6 0 2.2.9 4.2 2.4 5.6 1.5 1.5 3.5 2.4 5.6 2.4 2.2 0 4.2-.9 5.6-2.4 1.5-1.5 2.4-3.5 2.4-5.6 0-2.2-.9-4.2-2.4-5.6-1.4-1.5-3.4-2.4-5.6-2.4zm0 1.8c1.6 0 3.1.7 4.2 1.8 1.1 1.1 1.8 2.6 1.8 4.2 0 1.6-.7 3.1-1.8 4.2-1.1 1.1-2.6 1.8-4.2 1.8-1.6 0-3.1-.7-4.2-1.8-1.1-1.1-1.8-2.6-1.8-4.2 0-1.6.7-3.1 1.8-4.2 1.1-1.1 2.6-1.8 4.2-1.8z"/></svg>`;
+            } else if (type === 'feishu') {
+                iconSvg = `<svg class="${iconClass}" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm0-4h-2V7h2v6zm4 4h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+            }
+            
+            selected.innerHTML = `
+                ${iconSvg}
+                <span>${name}</span>
+            `;
+            toggleChannelDropdown();
+        }
+
+        // 点击外部关闭远控通道下拉框
+        document.addEventListener('click', function(e) {
+            const wrapper = document.getElementById('channelWrapper');
+            const dropdown = document.getElementById('channelDropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // 切换专家下拉框
+        function toggleExpertDropdown() {
+            const wrapper = document.querySelector('.expert-select-wrapper');
+            const dropdown = document.getElementById('expertDropdown');
+            wrapper.classList.toggle('active');
+            dropdown.classList.toggle('active');
+        }
+
+        // 选择专家
+        function selectExpert(name, avatar) {
+            const selected = document.getElementById('expertSelected');
+            selected.innerHTML = `
+                <img src="${avatar}" alt="${name}" class="expert-avatar">
+                <span>${name}</span>
+            `;
+            toggleExpertDropdown();
+        }
+
+        // 点击外部关闭专家下拉框
+        document.addEventListener('click', function(e) {
+            const wrapper = document.querySelector('.expert-select-wrapper');
+            const dropdown = document.getElementById('expertDropdown');
+            if (wrapper && !wrapper.contains(e.target)) {
+                wrapper.classList.remove('active');
+                dropdown.classList.remove('active');
+            }
+        });
+
+        // 自定义创建按钮点击事件
+        document.querySelector('.create-custom-btn').addEventListener('click', openModal);
+
+        // 点击遮罩层关闭弹窗
+        document.getElementById('createTaskModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 时间标签切换
+        document.querySelectorAll('.time-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.time-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 更新配置显示
+                const tabType = this.dataset.tab;
+                const config = document.getElementById('timeConfig');
+                if (tabType === 'daily') {
+                    config.innerHTML = `
+                        <div class="time-input-wrapper">
+                            <input type="time" class="time-input" value="16:22">
+                        </div>
+                        <div class="weekdays">
+                            <button class="weekday-btn">周一</button>
+                            <button class="weekday-btn">周二</button>
+                            <button class="weekday-btn">周三</button>
+                            <button class="weekday-btn">周四</button>
+                            <button class="weekday-btn">周五</button>
+                            <button class="weekday-btn">周六</button>
+                            <button class="weekday-btn">周日</button>
+                        </div>
+                    `;
+                } else if (tabType === 'interval') {
+                    config.innerHTML = `
+                        <span class="time-config-label">每隔</span>
+                        <input type="number" class="form-input" style="width: 80px;" placeholder="30" value="30">
+                        <span class="time-config-label">分钟</span>
+                        <div class="time-input-wrapper">
+                            <input type="time" class="time-input" value="16:22">
+                        </div>
+                    `;
+                } else if (tabType === 'once') {
+                    config.innerHTML = `
+                        <div class="time-input-wrapper">
+                            <input type="date" class="form-input" style="width: auto;">
+                        </div>
+                        <div class="time-input-wrapper">
+                            <input type="time" class="time-input" value="16:22">
+                        </div>
+                    `;
+                }
+                
+                // 重新绑定星期按钮事件
+                bindWeekdayButtons();
+            });
+        });
+
+        // 绑定星期按钮事件
+        function bindWeekdayButtons() {
+            document.querySelectorAll('.weekday-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                });
+            });
+        }
+
+        // 初始化绑定
+        bindWeekdayButtons();
+
+        // 模板卡片点击事件
+        document.querySelectorAll('.template-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const name = this.querySelector('.template-name').textContent;
+                console.log('选择模板：' + name);
+            });
+        });
+
+        // 打开模板弹窗并填充数据
+        function openTemplateModal(taskName, expertName, prompt, time, weekdays) {
+            // 打开弹窗
+            document.getElementById('createTaskModal').classList.add('active');
+            
+            // 填充任务名称
+            const taskInput = document.querySelector('.modal-body .form-row .form-group:first-child .form-input');
+            if (taskInput) taskInput.value = taskName;
+            
+            // 填充任务指令
+            const textarea = document.querySelector('.form-textarea');
+            if (textarea) textarea.value = prompt;
+            
+            // 设置时间
+            const timeInput = document.querySelector('.time-input');
+            if (timeInput) timeInput.value = time;
+            
+            // 设置执行专家
+            const expertSelected = document.getElementById('expertSelected');
+            if (expertSelected) {
+                // 查找匹配的专家头像
+                const expertOptions = document.querySelectorAll('#expertDropdown .expert-option');
+                let found = false;
+                expertOptions.forEach(option => {
+                    const span = option.querySelector('span');
+                    const img = option.querySelector('img');
+                    if (span && span.textContent === expertName && img) {
+                        expertSelected.innerHTML = `<img src="${img.src}" alt="${expertName}" class="expert-avatar"><span>${expertName}</span>`;
+                        found = true;
+                    }
+                });
+                if (!found) {
+                    expertSelected.innerHTML = `<span>${expertName}</span>`;
+                }
+            }
+            
+            // 设置星期按钮
+            const weekdayBtns = document.querySelectorAll('.weekday-btn');
+            weekdayBtns.forEach((btn, index) => {
+                if (weekdays.includes(index)) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // 重置远控通道为未选择状态
+            const channelSelected = document.getElementById('channelSelected');
+            if (channelSelected) {
+                channelSelected.innerHTML = `
+                    <svg class="channel-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                    </svg>
+                    <span>选择远控通道</span>
+                `;
+            }
+        }
+
+        // 导航项点击事件 - 跳转到对应页面
+        const pageMap = {
+            '对话': 'chat.html',
+            '专家': 'agent.html',
+            '任务': 'scheduled-tasks.html',
+            '知识库': 'knowledge-base.html',
+            '连接': 'channels-ui.html',
+            '设置': 'settings.html'
+        };
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const span = this.querySelector('span');
+                if (!span) return;
+                const text = span.textContent.trim();
+                const target = pageMap[text];
+                if (target) {
+                    window.location.href = target;
+                } else {
+                    document.querySelectorAll('.sidebar .nav-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // 窗口控制按钮
+        document.querySelector('.window-btn.minimize').addEventListener('click', function() {
+            console.log('最小化窗口');
+        });
+
+        document.querySelector('.window-btn.maximize').addEventListener('click', function() {
+            console.log('最大化窗口');
+        });
+
+        document.querySelector('.window-btn.close').addEventListener('click', function() {
+            console.log('关闭窗口');
+        });
+    </script>
+</body>
+</html>

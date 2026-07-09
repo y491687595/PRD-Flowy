@@ -1,0 +1,1946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowyAIPC - 技能商店</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #F3F4F6;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .app-window {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 900px;
+            background: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .title-bar {
+            height: 40px;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 0 20px;
+            user-select: none;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .title-bar-icon {
+            width: 20px;
+            height: 20px;
+            background: #000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+        }
+
+        .window-btn {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #666;
+        }
+
+        .window-btn:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .window-btn.close:hover {
+            background: #e81123;
+            color: white;
+        }
+
+        .window-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+            gap: 12px;
+        }
+
+        .left-panel {
+            display: flex;
+            height: 100%;
+            gap: 12px;
+            background: transparent;
+        }
+
+        .sidebar {
+            width: 56px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            flex-shrink: 0;
+            border-radius: 16px;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #666;
+        }
+
+        .nav-item:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .nav-item.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            overflow: hidden;
+            padding: 24px;
+        }
+
+        /* 技能商店样式 */
+        .skill-store-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .skill-search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            width: 320px;
+        }
+
+        .skill-search-box svg {
+            width: 18px;
+            height: 18px;
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+
+        .skill-search-box input {
+            border: none;
+            outline: none;
+            font-size: 14px;
+            color: #1f2937;
+            width: 100%;
+            background: transparent;
+            font-family: inherit;
+        }
+
+        .skill-search-box input::placeholder {
+            color: #9ca3af;
+        }
+
+        .skill-create-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: #1f2937;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .skill-create-btn-wrapper {
+            position: relative;
+        }
+
+        .skill-create-dropdown {
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+            padding: 8px;
+            min-width: 280px;
+            display: none;
+            z-index: 100;
+            border: 1px solid #f3f4f6;
+        }
+
+        .skill-create-dropdown.show {
+            display: block;
+            animation: dropdownFadeIn 0.2s ease;
+        }
+
+        @keyframes dropdownFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dropdown-item:hover {
+            background: #f8fafc;
+        }
+
+        .dropdown-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .dropdown-icon.blue {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .dropdown-icon.purple {
+            background: #faf5ff;
+            color: #a855f7;
+        }
+
+        .dropdown-icon svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .dropdown-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .dropdown-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .dropdown-desc {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .skill-create-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .skill-main-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .skill-main-tab {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            background: transparent;
+            border: none;
+            font-family: inherit;
+            position: relative;
+        }
+
+        .skill-main-tab:hover {
+            color: #1f2937;
+            background: #f3f4f6;
+        }
+
+        .skill-main-tab.active {
+            color: #1f2937;
+            background: #e5e7eb;
+        }
+
+        .skill-category-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .skill-tag-item {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            background: transparent;
+            border: 1px solid transparent;
+            user-select: none;
+        }
+
+        .skill-tag-item:hover {
+            color: #1f2937;
+            background: rgba(0,0,0,0.03);
+        }
+
+        .skill-tag-item.active {
+            color: #1f2937;
+            background: #e5e7eb;
+            border-color: #d1d5db;
+        }
+
+        .hot-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            background: #ef4444;
+            color: white;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 4px;
+            vertical-align: middle;
+        }
+
+        .skill-store-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .skill-store-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .skill-store-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #d1d5db;
+        }
+
+        .skill-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .skill-card-actions {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .skill-more-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            flex-shrink: 0;
+            padding: 0;
+        }
+
+        .skill-more-btn:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .skill-more-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .skill-more-dropdown {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 4px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid #e5e7eb;
+            min-width: 120px;
+            z-index: 100;
+            display: none;
+            overflow: hidden;
+        }
+
+        .skill-more-dropdown.show {
+            display: block;
+            animation: fadeIn 0.15s ease;
+        }
+
+        .skill-more-dropdown-item {
+            padding: 10px 16px;
+            font-size: 13px;
+            color: #ef4444;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+
+        .skill-more-dropdown-item:hover {
+            background: #fef2f2;
+        }
+
+        .skill-more-dropdown-item svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .skill-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .skill-icon svg {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+
+        .skill-card-title {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .skill-download-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #6b7280;
+            flex-shrink: 0;
+        }
+
+        .skill-store-card:hover .skill-download-btn {
+            background: #EA580C;
+            color: white;
+            border-color: #EA580C;
+        }
+
+        .skill-download-btn.installed {
+            background: white;
+            color: #1f2937;
+            border-color: #e5e7eb;
+        }
+
+        .skill-download-btn.installed:hover {
+            background: #f3f4f6;
+            border-color: #d1d5db;
+        }
+
+        .skill-download-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .skill-card-desc {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin: 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* 安装技能弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .install-modal {
+            background: white;
+            border-radius: 20px;
+            width: 560px;
+            max-height: 480px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .modal-header {
+            padding: 24px 24px 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+
+        .modal-title-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 0;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: #9ca3af;
+            margin: 0;
+        }
+
+        .modal-close-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: #9ca3af;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .modal-close-btn:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .modal-close-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .modal-body {
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .modal-search-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-search-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .modal-search-box svg {
+            width: 18px;
+            height: 18px;
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+
+        .modal-search-box input {
+            border: none;
+            outline: none;
+            font-size: 14px;
+            color: #1f2937;
+            width: 100%;
+            background: transparent;
+            font-family: inherit;
+        }
+
+        .modal-search-box input::placeholder {
+            color: #9ca3af;
+        }
+
+        .modal-source-label {
+            font-size: 13px;
+            color: #6b7280;
+            white-space: nowrap;
+        }
+
+        .modal-source-tags {
+            display: flex;
+            gap: 8px;
+        }
+
+        .modal-source-tag {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: transparent;
+            color: #6b7280;
+            font-family: inherit;
+        }
+
+        .modal-source-tag:hover {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+
+        .modal-source-tag.active {
+            background: #eff6ff;
+            color: #3b82f6;
+        }
+
+        .modal-skill-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .modal-skill-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .modal-skill-item:hover {
+            background: #f9fafb;
+        }
+
+        .modal-skill-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: #f97316;
+        }
+
+        .modal-skill-icon svg {
+            width: 20px;
+            height: 20px;
+            color: white;
+        }
+
+        .modal-skill-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .modal-skill-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1f2937;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .modal-skill-desc {
+            font-size: 12px;
+            color: #9ca3af;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .modal-skill-version {
+            font-size: 12px;
+            color: #9ca3af;
+            flex-shrink: 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .modal-install-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #d1d5db;
+            background: white;
+            color: #6b7280;
+            font-family: inherit;
+            flex-shrink: 0;
+        }
+
+        .modal-install-btn:hover {
+            background: #EA580C;
+            color: white;
+            border-color: #EA580C;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-window">
+        <!-- Windows 标题栏 -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <div class="title-bar-icon">F</div>
+                <span>FlowyAIPC</span>
+            </div>
+            <div class="window-controls">
+                <button class="window-btn minimize" title="最小化">
+                    <svg viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1" y="5.5" width="10" height="1"/>
+                    </svg>
+                </button>
+                <button class="window-btn maximize" title="最大化">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="1.5" y="1.5" width="9" height="9"/>
+                    </svg>
+                </button>
+                <button class="window-btn close" title="关闭">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M1 1l10 10M11 1L1 11"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- 左侧融合面板 -->
+            <div class="left-panel">
+                <!-- 左侧窄边栏 -->
+                <aside class="sidebar">
+                    <div class="sidebar-top">
+                        <div class="user-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                        <nav class="nav-menu">
+                            <div class="nav-item" onclick="location.href='chat.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>对话</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='agent.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='scheduled-tasks.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                <span>任务</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='knowledge-base.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                <span>知识库</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='channels-ui.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <span>连接</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span>会议</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                <span>AI视频</span>
+                            </div>
+                            <div class="nav-item active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>技能</span>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="sidebar-bottom">
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>社区</span>
+                        </div>
+                        <div class="nav-item" onclick="location.href='settings.html'">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 右侧主内容区 - 技能商店 -->
+            <main class="main-content">
+                <!-- 顶部搜索栏和创建按钮 -->
+                <div class="skill-store-header">
+                    <div class="skill-search-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        <input type="text" placeholder="搜索技能，按 ⌘ 搜索" />
+                    </div>
+                    <div class="skill-create-btn-wrapper">
+                        <button class="skill-create-btn" onclick="toggleCreateDropdown()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                            创建技能
+                        </button>
+                        <div class="skill-create-dropdown" id="createDropdown">
+                            <div class="dropdown-item" onclick="openInstallModal()">
+                                <div class="dropdown-icon blue">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="dropdown-text">
+                                    <span class="dropdown-title">联网搜索</span>
+                                    <span class="dropdown-desc">描述你的需求，AI帮你生成</span>
+                                </div>
+                            </div>
+                            <div class="dropdown-item" onclick="openFilePicker()">
+                                <div class="dropdown-icon purple">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <polyline points="17 8 12 3 7 8"/>
+                                        <line x1="12" y1="3" x2="12" y2="15"/>
+                                    </svg>
+                                </div>
+                                <div class="dropdown-text">
+                                    <span class="dropdown-title">选择技能包</span>
+                                    <span class="dropdown-desc">直接选择.zip或SKILL.md文件</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 主分类标签 -->
+                <div class="skill-main-tabs">
+                    <div class="skill-main-tab active" onclick="switchMainTab(this, 'market')">市场</div>
+                    <div class="skill-main-tab" onclick="switchMainTab(this, 'installed')">已安装</div>
+                </div>
+
+                <!-- 分类标签 -->
+                <div class="skill-category-tags" id="categoryTags">
+                    <div class="skill-tag-item active">精选</div>
+                    <div class="skill-tag-item">Flowy出品 <span class="hot-badge">HOT</span></div>
+                    <div class="skill-tag-item">通用基础</div>
+                    <div class="skill-tag-item">创作</div>
+                    <div class="skill-tag-item">学术教育</div>
+                    <div class="skill-tag-item">开发技术</div>
+                    <div class="skill-tag-item">法律</div>
+                    <div class="skill-tag-item">生活</div>
+                    <div class="skill-tag-item">自媒体营销</div>
+                    <div class="skill-tag-item">财务金融</div>
+                    <div class="skill-tag-item">电商</div>
+                </div>
+
+                <!-- 技能卡片网格 - 市场 -->
+                <div class="skill-store-grid" id="marketGrid">
+                    <!-- 第一行 -->
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FF6B6B;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <path d="M3 9h18"/>
+                                    <path d="M9 21V9"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">PPT大师【三万同款】</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">【三万同款】用AI一键生成各种风格PPT，告别模板审美疲劳。【下载需2-3分钟】</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #4ADE80;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">傅盛风格公众号创作助手【三...</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">微信公众号文章创作，支持策划、配图和推送到草稿箱</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #34D399;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">三万同款文生图</h3>
+                            <button class="skill-download-btn installed">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">通过文字描述或参考图片，快速生成/编辑高质量JPEG图像。</p>
+                    </div>
+
+                    <!-- 第二行 -->
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #60A5FA;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7"/>
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI视频生成</h3>
+                            <button class="skill-download-btn installed">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">文生视频、图生视频，快速产出动态内容</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FBBF24;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">创作知识漫画</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">将文本转化为教育漫画，支持多种画风与情绪表达，可进行分镜与素材拆解。</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #818CF8;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">网页幻灯片</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">一键生成网页演示文稿，可在浏览器中编辑，支持与PPTX深度转换。</p>
+                    </div>
+
+                    <!-- 第三行 -->
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #38BDF8;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI文本润色</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">去除AI写作痕迹，让文本更自然、更有人味</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FB923C;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI日报速览【三万同款】</h3>
+                            <button class="skill-download-btn installed">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">实时聚合多源头深度资讯，通过AI自动化提取核心要点并生成结构化日报，支持自动推送。</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #A78BFA;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">科技资讯精选【三万同款】</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">AI聚合90家Hacker News热门博客，生成双语科技摘要</p>
+                    </div>
+
+                    <!-- 第四行 -->
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #22D3EE;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">飞常准航班查询</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">基于飞常准官方接口的专业民航数据工具，支持按起降机场查...</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #1F2937;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">X/Twitter 自动化</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">自动化操作X/Twitter，支持发推文、点赞、转发、发私信、关...</p>
+                    </div>
+
+                    <div class="skill-store-card">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #F97316;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">Tavily 网页搜索</h3>
+                            <button class="skill-download-btn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="7 10 12 15 17 10"/>
+                                    <line x1="12" y1="15" x2="12" y2="3"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <p class="skill-card-desc">通过Tavily API搜索互联网，返回相关网页的标题、链接和内...</p>
+                    </div>
+                </div>
+
+                <!-- 技能卡片网格 - 已安装 -->
+                <div class="skill-store-grid" id="installedGrid" style="display: none;">
+                    <!-- 第一行 -->
+                    <div class="skill-store-card" data-skill-id="ppt-master">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FF6B6B;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <path d="M3 9h18"/>
+                                    <path d="M9 21V9"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">PPT大师【三万同款】</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">【三万同款】用AI一键生成各种风格PPT，告别模板审美疲劳。【下载需2-3分钟】</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="wechat-helper">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #4ADE80;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">傅盛风格公众号创作助手【三...</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">微信公众号文章创作，支持策划、配图和推送到草稿箱</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="text-to-image">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #34D399;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                                    <path d="M21 15l-5-5L5 21"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">三万同款文生图</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">通过文字描述或参考图片，快速生成/编辑高质量JPEG图像。</p>
+                    </div>
+
+                    <!-- 第二行 -->
+                    <div class="skill-store-card" data-skill-id="ai-video">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #60A5FA;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="23 7 16 12 23 17 23 7"/>
+                                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI视频生成</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">文生视频、图生视频，快速产出动态内容</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="comic-creator">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FBBF24;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">创作知识漫画</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">将文本转化为教育漫画，支持多种画风与情绪表达，可进行分镜与素材拆解。</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="web-slides">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #818CF8;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">网页幻灯片</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">一键生成网页演示文稿，可在浏览器中编辑，支持与PPTX深度转换。</p>
+                    </div>
+
+                    <!-- 第三行 -->
+                    <div class="skill-store-card" data-skill-id="text-polish">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #38BDF8;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                    <polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI文本润色</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">去除AI写作痕迹，让文本更自然、更有人味</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="ai-daily">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #FB923C;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">AI日报速览【三万同款】</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">实时聚合多源头深度资讯，通过AI自动化提取核心要点并生成结构化日报，支持自动推送。</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="tech-news">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #A78BFA;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">科技资讯精选【三万同款】</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">AI聚合90家Hacker News热门博客，生成双语科技摘要</p>
+                    </div>
+
+                    <!-- 第四行 -->
+                    <div class="skill-store-card" data-skill-id="flight-query">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #22D3EE;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">飞常准航班查询</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">基于飞常准官方接口的专业民航数据工具，支持按起降机场查...</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="twitter-auto">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #1F2937;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">X/Twitter 自动化</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">自动化操作X/Twitter，支持发推文、点赞、转发、发私信、关...</p>
+                    </div>
+
+                    <div class="skill-store-card" data-skill-id="tavily-search">
+                        <div class="skill-card-header">
+                            <div class="skill-icon" style="background: #F97316;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="11" cy="11" r="8"/>
+                                    <path d="M21 21l-4.35-4.35"/>
+                                </svg>
+                            </div>
+                            <h3 class="skill-card-title">Tavily 网页搜索</h3>
+                            <div class="skill-card-actions">
+                                <button class="skill-more-btn" onclick="toggleMoreDropdown(this)">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="12" cy="5" r="1"/>
+                                        <circle cx="12" cy="12" r="1"/>
+                                        <circle cx="12" cy="19" r="1"/>
+                                    </svg>
+                                </button>
+                                <div class="skill-more-dropdown">
+                                    <button class="skill-more-dropdown-item" onclick="deleteSkill(this)">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                        </svg>
+                                        删除
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="skill-card-desc">通过Tavily API搜索互联网，返回相关网页的标题、链接和内...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 安装技能弹窗 -->
+    <div class="modal-overlay" id="installModalOverlay" onclick="closeInstallModal(event)">
+        <div class="install-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <h2 class="modal-title">安装技能</h2>
+                    <p class="modal-subtitle">默认展示 Explore，输入关键词后执行搜索。</p>
+                </div>
+                <button class="modal-close-btn" onclick="closeInstallModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-search-row">
+                    <div class="modal-search-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"/>
+                            <path d="M21 21l-4.35-4.35"/>
+                        </svg>
+                        <input type="text" placeholder="搜索市场..." />
+                    </div>
+                    <span class="modal-source-label">来源:</span>
+                    <div class="modal-source-tags">
+                        <button class="modal-source-tag active">SkillHub</button>
+                        <button class="modal-source-tag">ClawHub</button>
+                    </div>
+                </div>
+                <div class="modal-skill-list">
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">Xiaohongshu (小红书) Autom...</span>
+                            <span class="modal-skill-desc">Automate Xiaohongshu...</span>
+                        </div>
+                        <span class="modal-skill-version">v1.0.0</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">小红书 - RedNote</span>
+                            <span class="modal-skill-desc">小红书全能助手 — 文案生成...</span>
+                        </div>
+                        <span class="modal-skill-version">v1.2.5</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">小红书</span>
+                            <span class="modal-skill-desc">XiaoHongShu (Little Red Book...</span>
+                        </div>
+                        <span class="modal-skill-version">v0.1.0</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">Github</span>
+                            <span class="modal-skill-desc">Interact with GitHub using the...</span>
+                        </div>
+                        <span class="modal-skill-version">v1.0.0</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">Openai Whisper</span>
+                            <span class="modal-skill-desc">Local speech-to-text with the...</span>
+                        </div>
+                        <span class="modal-skill-version">v1.0.0</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">Ontology</span>
+                            <span class="modal-skill-desc">Typed knowledge graph for...</span>
+                        </div>
+                        <span class="modal-skill-version">v0.1.2</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                    <div class="modal-skill-item">
+                        <div class="modal-skill-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M3 9h18"/>
+                                <path d="M9 21V9"/>
+                            </svg>
+                        </div>
+                        <div class="modal-skill-info">
+                            <span class="modal-skill-name">Gog</span>
+                            <span class="modal-skill-desc">Google Workspace CLI for...</span>
+                        </div>
+                        <span class="modal-skill-version">v1.0.0</span>
+                        <button class="modal-install-btn">安装</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchMainTab(tab, type) {
+            document.querySelectorAll('.skill-main-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const marketGrid = document.getElementById('marketGrid');
+            const installedGrid = document.getElementById('installedGrid');
+            const categoryTags = document.getElementById('categoryTags');
+            
+            if (type === 'market') {
+                marketGrid.style.display = 'grid';
+                installedGrid.style.display = 'none';
+                categoryTags.style.display = 'flex';
+            } else if (type === 'installed') {
+                marketGrid.style.display = 'none';
+                installedGrid.style.display = 'grid';
+                categoryTags.style.display = 'none';
+            }
+        }
+
+        function toggleCreateDropdown() {
+            const dropdown = document.getElementById('createDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function toggleMoreDropdown(btn) {
+            const dropdown = btn.nextElementSibling;
+            const isShowing = dropdown.classList.contains('show');
+            
+            document.querySelectorAll('.skill-more-dropdown').forEach(d => d.classList.remove('show'));
+            
+            if (!isShowing) {
+                dropdown.classList.add('show');
+            }
+        }
+
+        function deleteSkill(btn) {
+            const card = btn.closest('.skill-store-card');
+            if (card) {
+                card.style.transition = 'all 0.3s ease';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.9)';
+                setTimeout(() => {
+                    card.remove();
+                }, 300);
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.skill-card-actions')) {
+                document.querySelectorAll('.skill-more-dropdown').forEach(d => d.classList.remove('show'));
+            }
+        });
+
+        function openInstallModal() {
+            document.getElementById('installModalOverlay').classList.add('show');
+            document.getElementById('createDropdown').classList.remove('show');
+        }
+
+        function closeInstallModal(event) {
+            if (!event || event.target === document.getElementById('installModalOverlay')) {
+                document.getElementById('installModalOverlay').classList.remove('show');
+            }
+        }
+
+        function openFilePicker() {
+            document.getElementById('createDropdown').classList.remove('show');
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip,.md';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    console.log('选择的文件:', file.name);
+                }
+            };
+            input.click();
+        }
+        document.addEventListener('click', function(event) {
+            const wrapper = document.querySelector('.skill-create-btn-wrapper');
+            const dropdown = document.getElementById('createDropdown');
+            if (!wrapper.contains(event.target) && dropdown.classList.contains('show')) {
+                dropdown.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

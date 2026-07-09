@@ -1,0 +1,4407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QClaw - AI 对话助手</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-outer: #F3F4F6;
+            --bg-window: #ffffff;
+            --bg-sidebar: #ffffff;
+            --bg-agent-panel: #ffffff;
+            --bg-main: #ffffff;
+            --bg-hover: #f5f5f5;
+            --bg-selected: #f0f0f0;
+            --text-primary: #1a1a1a;
+            --text-secondary: #666666;
+            --text-tertiary: #999999;
+            --accent-purple: #8b5cf6;
+            --accent-orange: #f97316;
+            --accent-green: #22c55e;
+            --accent-blue: #3b82f6;
+            --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-outer);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* 外层容器 - 浮动窗口 */
+        .app-window {
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            max-height: 900px;
+            background: var(--bg-window);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Windows 标题栏 */
+        .title-bar {
+            height: 40px;
+            background: var(--bg-window);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 0 0 20px;
+            -webkit-app-region: drag;
+            user-select: none;
+        }
+
+        .title-bar-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .title-bar-icon {
+            width: 20px;
+            height: 20px;
+            background: #000000;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .window-controls {
+            display: flex;
+            height: 100%;
+            -webkit-app-region: no-drag;
+        }
+
+        .window-btn {
+            width: 46px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .window-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .window-btn.close:hover {
+            background: #e81123;
+            color: white;
+        }
+
+        .window-btn svg {
+            width: 12px;
+            height: 12px;
+        }
+
+        /* 主内容区 */
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+            gap: 12px;
+        }
+
+        /* 左侧区域 - 边栏和Agent列表分开 */
+        .left-panel {
+            display: flex;
+            height: 100%;
+            gap: 12px;
+            background: transparent;
+        }
+
+        /* 左侧窄边栏 */
+        .sidebar {
+            width: 56px;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 0;
+            flex-shrink: 0;
+            border-radius: 16px;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.05);
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 16px;
+        }
+
+        .nav-item {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+
+        .nav-item:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--bg-selected);
+            color: var(--text-primary);
+        }
+
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .nav-item span {
+            font-size: 9px;
+            font-weight: 500;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Agent 列表面板 */
+        .agent-panel {
+            width: 260px;
+            background: #F3F4F6;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            padding: 12px;
+            border-radius: 16px;
+        }
+
+        .agent-panel-header {
+            padding-bottom: 12px;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            background: #ffffff;
+            border-radius: 10px;
+            color: var(--text-tertiary);
+            font-size: 13px;
+            cursor: text;
+            transition: all 0.2s;
+            border: 1px solid #e5e5e5;
+        }
+
+        .search-box:hover {
+            background: #f9f9f9;
+            border-color: #d0d0d0;
+        }
+
+        .search-box svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .new-agent-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 10px;
+            background: var(--bg-hover);
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+            border: 1px solid #d0d0d0;
+        }
+
+        .new-agent-btn:hover {
+            background: #eeeeee;
+            color: var(--text-primary);
+            border-color: #b0b0b0;
+        }
+
+        .new-agent-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .agent-list {
+            flex: 1;
+            overflow-y: auto;
+            padding-top: 8px;
+        }
+
+        .agent-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 4px;
+            background: transparent;
+        }
+
+        .agent-item:hover {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .agent-item.active {
+            background: #ffffff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .agent-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .agent-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .agent-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .agent-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+
+        /* 右侧主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .main-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+        }
+
+        .tab-switcher {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-hover);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .tab-btn {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: var(--text-primary);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .points-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .points-icon {
+            width: 18px;
+            height: 18px;
+            color: #f59e0b;
+        }
+
+        .points-value {
+            color: var(--text-primary);
+        }
+
+        .buy-btn {
+            color: #f97316;
+            cursor: pointer;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+
+        .buy-btn:hover {
+            color: #ea580c;
+            text-decoration: underline;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .icon-btn {
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .brain-btn .brain-icon {
+            transition: all 0.3s;
+        }
+
+        .brain-btn.active .brain-icon {
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        .shrink-btn .shrink-icon {
+            transition: all 0.3s;
+        }
+
+        .shrink-btn.active .shrink-icon {
+            fill: currentColor;
+            stroke: currentColor;
+        }
+
+        .shrink-btn.active .shrink-icon line {
+            stroke: white;
+        }
+
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 30px 50px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .welcome-section {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .welcome-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .welcome-title .sparkle {
+            color: var(--accent-purple);
+            font-size: 22px;
+        }
+
+        .welcome-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* 产品经理页面样式 */
+        .pm-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            text-align: center;
+        }
+
+        .pm-avatar {
+            width: 120px;
+            height: 120px;
+            margin-bottom: 20px;
+        }
+
+        .pm-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: var(--text-primary);
+        }
+
+        .pm-title .pm-sparkle {
+            color: #ff6b6b;
+            font-size: 20px;
+        }
+
+        .pm-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            margin-bottom: 60px;
+        }
+
+        .pm-suggestions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: flex-start;
+        }
+
+        .pm-suggestion-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 14px 20px;
+            background: #f8f8f8;
+            border-radius: 24px;
+            font-size: 14px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 280px;
+        }
+
+        .pm-suggestion-item:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .pm-arrow {
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Skill 卡片网格 */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 40px;
+        }
+
+        .skill-card {
+            background: white;
+            border-radius: 16px;
+            padding: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .skill-card:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .skill-card:nth-child(1) {
+            background: linear-gradient(135deg, #fef3ff 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(2) {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(3) {
+            background: linear-gradient(135deg, #f0fdf4 0%, #fff 100%);
+        }
+
+        .skill-card:nth-child(4) {
+            background: linear-gradient(135deg, #eff6ff 0%, #fff 100%);
+        }
+
+        .skill-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .skill-desc {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-bottom: 14px;
+        }
+
+        .skill-illustration {
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .skill-illustration svg {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            background: white;
+            color: var(--text-secondary);
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: auto;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: none;
+        }
+
+        .refresh-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .refresh-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            margin-top: auto;
+            padding: 0 50px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-container {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+
+        .input-container:hover {
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            transform: translateY(-2px);
+        }
+
+        .input-editor {
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 12px;
+            min-height: 24px;
+            outline: none;
+            cursor: text;
+        }
+
+        .input-editor:empty:before {
+            content: attr(placeholder);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .input-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toolbar-left {
+            display: flex;
+            gap: 8px;
+        }
+
+        .toolbar-btn {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: var(--bg-hover);
+            height: 32px;
+        }
+
+        .toolbar-btn:hover {
+            background: #eeeeee;
+            color: var(--text-primary);
+        }
+
+        .toolbar-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .toolbar-right {
+            display: flex;
+            gap: 6px;
+        }
+
+        /* 模型选择下拉菜单 */
+        .model-dropdown {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            min-width: 280px;
+            display: none;
+            z-index: 100;
+        }
+
+        .model-dropdown.show {
+            display: block;
+        }
+
+        .model-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .model-dropdown-item:hover {
+            background: #f5f5f5;
+        }
+
+        .model-dropdown-item.selected {
+            background: #f0f0f0;
+        }
+
+        .model-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+        }
+
+        .model-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .model-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .model-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .model-points {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .model-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .model-badge.hot {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .model-dropdown-divider {
+            height: 1px;
+            background: #e5e5e5;
+            margin: 8px 0;
+        }
+
+        .model-dropdown-footer {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .model-dropdown-footer:hover {
+            background: #f5f5f5;
+        }
+
+        .model-dropdown-footer svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .model-dropdown-footer .arrow {
+            margin-left: auto;
+            font-size: 12px;
+        }
+
+        .toolbar-btn-wrapper {
+            position: relative;
+        }
+
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+            border: none;
+            background: transparent;
+        }
+
+        .action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .action-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .file-tag {
+            position: relative;
+            cursor: default;
+        }
+
+        .file-tag .delete-btn {
+            display: none;
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            align-items: center;
+            justify-content: center;
+            background: #ff4444;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 12px;
+            border: none;
+            padding: 0;
+        }
+
+        .file-tag:hover .delete-btn {
+            display: flex;
+        }
+
+        .file-tag:hover {
+            padding-right: 28px;
+        }
+
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--bg-hover);
+            color: var(--text-tertiary);
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover {
+            background: #E55318;
+            color: white;
+        }
+
+        .send-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        /* Agent 历史记录展开 */
+        .agent-item-wrapper {
+            position: relative;
+            margin-bottom: 4px;
+        }
+
+        .agent-item-wrapper .agent-item {
+            margin-bottom: 0;
+            position: relative;
+        }
+
+        .agent-item-wrapper:hover .agent-actions {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .agent-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 2px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+
+        .agent-action-btn {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
+        }
+
+        .agent-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .agent-action-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .agent-history {
+            display: none;
+            padding: 4px 0 8px 0;
+            animation: slideDown 0.2s ease;
+        }
+
+        .agent-history.expanded {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-4px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+            position: relative;
+        }
+
+        .history-item:hover {
+            background: rgba(0, 0, 0, 0.04);
+            color: var(--text-primary);
+        }
+
+        .history-item svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+            color: var(--text-tertiary);
+        }
+
+        .history-item-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+
+        /* 历史记录项更多按钮 */
+        .history-item-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .history-item-more:hover {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .history-item-more svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .history-item:hover .history-item-more {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 历史记录项菜单 */
+        .history-item-menu {
+            position: absolute;
+            right: 4px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            padding: 6px;
+            min-width: 120px;
+            display: none;
+            z-index: 200;
+        }
+
+        .history-item-menu.show {
+            display: block;
+        }
+
+        .history-item-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        .history-item-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .history-item-menu-item svg {
+            width: 14px;
+            height: 14px;
+            color: var(--text-secondary);
+        }
+
+        .history-more {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .history-more:hover {
+            color: var(--text-primary);
+        }
+
+        .history-more svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 更多菜单 */
+        .more-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 4px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 8px;
+            min-width: 160px;
+            display: none;
+            z-index: 100;
+        }
+
+        .more-menu.show {
+            display: block;
+        }
+
+        .more-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: var(--text-primary);
+        }
+
+        .more-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .more-menu-item svg {
+            width: 16px;
+            height: 16px;
+            color: var(--text-secondary);
+        }
+
+        /* 对话消息区域 */
+        .chat-messages {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+            padding: 20px 0;
+            max-width: 800px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .chat-messages.active {
+            display: flex;
+        }
+
+        /* 用户消息 */
+        .message-user {
+            display: flex;
+            justify-content: flex-end;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .message-user-content {
+            background: #E55318;
+            border-radius: 16px;
+            padding: 12px 18px;
+            font-size: 14px;
+            color: #ffffff;
+            line-height: 1.6;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .message-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* AI 消息 */
+        .message-ai {
+            display: flex;
+            justify-content: flex-start;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .message-ai-content {
+            flex: 1;
+            max-width: calc(100% - 44px);
+        }
+
+        .message-ai-text {
+            font-size: 14px;
+            color: var(--text-primary);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .message-ai-text p {
+            margin-bottom: 12px;
+        }
+
+        .message-ai-text strong {
+            font-weight: 600;
+        }
+
+        /* Skill 示例列表 */
+        .skill-examples {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 16px 0;
+        }
+
+        .skill-example-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .skill-example-icon {
+            font-size: 16px;
+        }
+
+        /* Skill 类型区域 */
+        .skill-type-section {
+            margin: 20px 0;
+        }
+
+        .skill-type-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .skill-type-icon {
+            font-size: 16px;
+        }
+
+        .skill-type-desc {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            padding-left: 22px;
+        }
+
+        /* Skill 卡片网格（AI回复中的） */
+        .skill-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 16px 0;
+        }
+
+        .skill-card-mini {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .skill-card-mini:hover {
+            border-color: #d0d0d0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .skill-card-mini-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .skill-card-mini-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        /* 消息底部操作栏 */
+        .message-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+        }
+
+        .message-action-btn {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-tertiary);
+            border: none;
+            background: transparent;
+        }
+
+        .message-action-btn:hover {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+
+        .message-action-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+            margin: 4px 0;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d0d0d0;
+            border-radius: 2px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #b0b0b0;
+        }
+
+        /* Agent 商店样式 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #F3F4F6;
+            border-radius: 16px;
+            overflow: hidden;
+            padding: 24px;
+        }
+
+        /* Tab 导航 */
+        .store-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .store-tabs .tab-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-new-agent {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #1a1a1a;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-new-agent:hover {
+            background: #f97316;
+            border-color: #f97316;
+            color: #ffffff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-new-agent svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .tab-item {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .tab-item:hover {
+            color: #1e293b;
+            background: rgba(0,0,0,0.03);
+        }
+
+        .tab-item.active {
+            color: #1e293b;
+            background: white;
+            border-color: #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        /* Banner 区域 */
+        .banner-section {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .banner-card {
+            background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            overflow: hidden;
+        }
+
+        .banner-main {
+            flex: 1.5;
+            min-height: 140px;
+        }
+
+        .banner-side {
+            flex: 1;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            min-height: 140px;
+        }
+
+        .banner-content {
+            flex: 1;
+        }
+
+        .banner-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .banner-title-small {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .banner-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        .banner-desc-small {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .banner-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #1e293b;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .banner-btn:hover {
+            background: #334155;
+        }
+
+        .banner-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .banner-illustration {
+            width: 180px;
+            height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .banner-illustration-small {
+            width: 100px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 分类标签 */
+        .category-tags {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .tag-item {
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .tag-item:hover {
+            color: #1e293b;
+            background: rgba(0,0,0,0.03);
+        }
+
+        .tag-item.active {
+            color: white;
+            background: #1e293b;
+        }
+
+        /* Agent 卡片网格 */
+        .agent-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .agent-store-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #e2e8f0;
+            min-height: 88px;
+        }
+
+        .agent-store-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-color: #f97316;
+        }
+
+        .agent-store-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .agent-store-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+        }
+
+        .agent-store-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .agent-store-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .agent-store-desc {
+            font-size: 12px;
+            color: #64748b;
+            line-height: 1.4;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+        }
+
+        /* 安装按钮 */
+        .install-btn {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            background: #1e293b;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .install-btn:hover {
+            background: #f97316;
+        }
+
+        .install-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .install-btn.installing {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .agent-store-card {
+            position: relative;
+        }
+
+        .agent-store-card:hover .install-btn {
+            display: flex;
+        }
+
+        /* Agent 详情页 */
+        .agent-detail-page {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 16px 24px 0;
+            margin-top: -16px;
+        }
+
+        .detail-back {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 0;
+            cursor: pointer;
+            color: #64748b;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+
+        .detail-back:hover {
+            color: #1e293b;
+        }
+
+        .detail-back svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .detail-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0 16px;
+            margin-bottom: 16px;
+        }
+
+        .detail-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .detail-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .detail-info {
+            flex: 1;
+        }
+
+        .detail-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 6px;
+        }
+
+        .detail-date {
+            font-size: 13px;
+            color: #94a3b8;
+        }
+
+        .detail-install-btn {
+            padding: 10px 32px;
+            background: #1e293b;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .detail-install-btn:hover {
+            background: #334155;
+        }
+
+        .detail-gallery {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            overflow-x: auto;
+        }
+
+        .gallery-item {
+            flex: 1;
+            min-width: 0;
+            aspect-ratio: 16 / 10;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .detail-section {
+            margin-bottom: 32px;
+        }
+
+        .detail-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+        }
+
+        .detail-desc {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.8;
+        }
+
+        .detail-scenarios {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .scenario-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .scenario-num {
+            font-size: 14px;
+            font-weight: 600;
+            color: #94a3b8;
+            flex-shrink: 0;
+            min-width: 24px;
+        }
+
+        .scenario-text {
+            font-size: 14px;
+            color: #475569;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        /* Agent 管理页面 */
+        .agent-manage-page {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .manage-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            margin-bottom: 16px;
+        }
+
+        .manage-header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .manage-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .manage-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .manage-header-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .manage-header-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0;
+        }
+
+        .manage-header-id {
+            font-size: 13px;
+            color: #94a3b8;
+            margin: 0;
+        }
+
+        .manage-chat-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .manage-chat-btn:hover {
+            background: #2563eb;
+        }
+
+        .manage-chat-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .manage-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            gap: 16px;
+        }
+
+        .manage-sidebar {
+            width: 220px;
+            flex-shrink: 0;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .manage-agent-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .manage-agent-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .manage-agent-item:hover {
+            background: #f1f5f9;
+        }
+
+        .manage-agent-item.active {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+        }
+
+        .manage-agent-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #f1f5f9;
+        }
+
+        .manage-agent-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .manage-agent-name {
+            flex: 1;
+            font-size: 14px;
+            color: #334155;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .manage-agent-tag {
+            font-size: 11px;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .manage-main {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .manage-tabs {
+            display: flex;
+            gap: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            margin-bottom: 20px;
+        }
+
+        .manage-tab-item {
+            font-size: 14px;
+            color: #64748b;
+            cursor: pointer;
+            padding-bottom: 12px;
+            margin-bottom: -12px;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .manage-tab-item:hover {
+            color: #334155;
+        }
+
+        .manage-tab-item.active {
+            color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .manage-tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #3b82f6;
+            border-radius: 1px;
+        }
+
+        .manage-section {
+            margin-bottom: 24px;
+        }
+
+        .manage-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 12px;
+        }
+
+        .manage-section-title svg {
+            width: 18px;
+            height: 18px;
+            color: #64748b;
+        }
+
+        .manage-info-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .manage-info-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 0;
+        }
+
+        .manage-info-row:not(:last-child) {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .manage-info-label {
+            width: 80px;
+            font-size: 14px;
+            color: #64748b;
+            flex-shrink: 0;
+        }
+
+        .manage-info-value {
+            font-size: 14px;
+            color: #1e293b;
+            font-weight: 500;
+        }
+
+        .manage-info-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #f1f5f9;
+        }
+
+        .manage-info-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* 安装成功弹窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            width: 360px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .modal-icon {
+            width: 56px;
+            height: 56px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+
+        .modal-icon svg {
+            width: 28px;
+            height: 28px;
+            color: white;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .modal-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .modal-btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .modal-btn-secondary {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .modal-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        /* 新建 Agent 弹窗 */
+        .create-agent-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .create-agent-overlay.active {
+            display: flex;
+        }
+
+        .create-agent-modal {
+            background: white;
+            border-radius: 16px;
+            width: 600px;
+            height: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: modalSlideIn 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .create-agent-header {
+            padding: 24px 32px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .create-agent-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .create-agent-subtitle {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .create-agent-subtitle .highlight {
+            color: #f97316;
+        }
+
+        .create-agent-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+            padding: 0;
+            position: absolute;
+            right: 0;
+            top: 24px;
+        }
+
+        .create-agent-close:hover {
+            background: #f1f5f9;
+        }
+
+        .create-agent-close svg {
+            width: 20px;
+            height: 20px;
+            color: #64748b;
+        }
+
+        .create-agent-body {
+            padding: 24px 32px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .form-label .required {
+            color: #f97316;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            background: white;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        .form-input::placeholder {
+            color: #94a3b8;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            background: white;
+            transition: all 0.2s;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 160px;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        .form-textarea::placeholder {
+            color: #94a3b8;
+        }
+
+        .char-count {
+            text-align: right;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 4px;
+        }
+
+        .avatar-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            flex-shrink: 0;
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .avatar-preview:hover {
+            border-color: #f97316;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-selector {
+            display: none;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 12px;
+            margin-top: 24px;
+            margin-bottom: 24px;
+        }
+
+        .avatar-selector.active {
+            display: grid;
+        }
+
+        .avatar-option {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            margin: 0 auto;
+        }
+
+        .avatar-option:hover {
+            border-color: #f97316;
+            transform: scale(1.05);
+        }
+
+        .avatar-option.selected {
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
+        }
+
+        .avatar-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .avatar-add {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px dashed #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 0 auto;
+        }
+
+        .avatar-add:hover {
+            border-color: #f97316;
+            color: #f97316;
+        }
+
+        .avatar-add svg {
+            width: 24px;
+            height: 24px;
+            color: #94a3b8;
+        }
+
+        .advanced-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 0;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 8px;
+        }
+
+        .advanced-toggle svg {
+            width: 16px;
+            height: 16px;
+            color: #64748b;
+            transition: transform 0.2s;
+        }
+
+        .advanced-toggle.active svg {
+            transform: rotate(180deg);
+        }
+
+        .advanced-section {
+            display: none;
+            padding-bottom: 16px;
+        }
+
+        .advanced-section.active {
+            display: block;
+        }
+
+        .select-dropdown {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            background: white;
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .select-dropdown:focus {
+            outline: none;
+            border-color: #f97316;
+        }
+
+        .skills-section {
+            margin-top: 12px;
+        }
+
+        .skills-search {
+            position: relative;
+            margin-bottom: 12px;
+        }
+
+        .skills-search svg {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: #94a3b8;
+        }
+
+        .skills-search input {
+            width: 100%;
+            padding: 10px 14px 10px 36px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e293b;
+            font-family: inherit;
+        }
+
+        .skills-search input:focus {
+            outline: none;
+            border-color: #f97316;
+            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+        }
+
+        .skills-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px;
+        }
+
+        .skill-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .skill-item:hover {
+            background: #f8fafc;
+        }
+
+        .skill-checkbox {
+            width: 18px;
+            height: 18px;
+            border: 2px solid #cbd5e1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .skill-item.selected .skill-checkbox {
+            background: #f97316;
+            border-color: #f97316;
+        }
+
+        .skill-checkbox svg {
+            width: 12px;
+            height: 12px;
+            color: white;
+            display: none;
+        }
+
+        .skill-item.selected .skill-checkbox svg {
+            display: block;
+        }
+
+        /* 常用技能标签 */
+        .skills-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .skill-tag {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .skill-tag:hover {
+            border-color: #cbd5e1;
+            background: #f1f5f9;
+        }
+
+        .skill-tag.selected {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #1e293b;
+        }
+
+        .skill-tag-checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #cbd5e1;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+
+        .skill-tag.selected .skill-tag-checkbox {
+            background: #f97316;
+            border-color: #f97316;
+        }
+
+        .skill-tag-checkbox svg {
+            width: 10px;
+            height: 10px;
+            color: white;
+            display: none;
+        }
+
+        .skill-tag.selected .skill-tag-checkbox svg {
+            display: block;
+        }
+
+        .skill-info {
+            flex: 1;
+        }
+
+        .skill-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .skill-desc {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .create-agent-footer {
+            padding: 16px 32px 24px;
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-cancel {
+            padding: 10px 24px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        .btn-create {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: white;
+            background: #f97316;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-create:hover {
+            background: #ea580c;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+        }
+
+        .btn-create:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-window">
+        <!-- Windows 标题栏 -->
+        <div class="title-bar">
+            <div class="title-bar-left">
+                <div class="title-bar-icon">F</div>
+                <span>FlowyAIPC</span>
+            </div>
+            <div class="window-controls">
+                <button class="window-btn minimize" title="最小化">
+                    <svg viewBox="0 0 12 12" fill="currentColor">
+                        <rect x="1" y="5.5" width="10" height="1"/>
+                    </svg>
+                </button>
+                <button class="window-btn maximize" title="最大化">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <rect x="1.5" y="1.5" width="9" height="9"/>
+                    </svg>
+                </button>
+                <button class="window-btn close" title="关闭">
+                    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M1 1l10 10M11 1L1 11"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="app-container">
+            <!-- 左侧融合面板 -->
+            <div class="left-panel">
+                <!-- 左侧窄边栏 -->
+                <aside class="sidebar">
+                    <div class="sidebar-top">
+                        <div class="user-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                        <nav class="nav-menu">
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>对话</span>
+                            </div>
+                            <div class="nav-item active">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                    <path d="M2 17l10 5 10-5"/>
+                                    <path d="M2 12l10 5 10-5"/>
+                                </svg>
+                                <span>专家</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"/>
+                                    <path d="M12 6v6l4 2"/>
+                                </svg>
+                                <span>任务</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                                </svg>
+                                <span>知识库</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                                </svg>
+                                <span>连接</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
+                                <span>会议</span>
+                            </div>
+                            <div class="nav-item">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                    <polygon points="10 8 16 12 10 16 10 8"/>
+                                </svg>
+                                <span>AI视频</span>
+                            </div>
+                            <div class="nav-item" onclick="location.href='skill.html'">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                <span>技能</span>
+                            </div>
+                        </nav>
+                    </div>
+                    <div class="sidebar-bottom">
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>社区</span>
+                        </div>
+                        <div class="nav-item">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            <span>设置</span>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- 右侧主内容区 - Agent 商店 -->
+            <main class="main-content">
+                <!-- Tab 导航 -->
+                <div class="store-tabs" id="storeTabs">
+                    <div class="tab-group">
+                        <div class="tab-item active" onclick="switchTab('store')">Agent 商店</div>
+                        <div class="tab-item" onclick="switchTab('manage')">Agent 管理</div>
+                    </div>
+                    <button class="btn-new-agent" onclick="createNewAgent()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 5v14M5 12h14"/>
+                        </svg>
+                        新建 Agent
+                    </button>
+                </div>
+
+                <!-- Banner 区域 -->
+                <div class="banner-section">
+                    <div class="banner-card banner-main">
+                        <div class="banner-content">
+                            <h2 class="banner-title">FlowyAIPC</h2>
+                            <p class="banner-desc">商用Agent文档/PPT/学习/股票全场景覆盖</p>
+                            <button class="banner-btn">
+                                马上开启
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="banner-illustration">
+                            <svg viewBox="0 0 200 120" fill="none">
+                                <rect x="40" y="20" width="120" height="80" rx="8" fill="#e8f4f8" stroke="#b8d4e3" stroke-width="2"/>
+                                <rect x="50" y="30" width="100" height="60" rx="4" fill="#fff"/>
+                                <rect x="60" y="40" width="30" height="40" rx="2" fill="#3b82f6"/>
+                                <rect x="65" y="48" width="20" height="2" rx="1" fill="#fff"/>
+                                <rect x="65" y="54" width="15" height="2" rx="1" fill="#fff"/>
+                                <rect x="65" y="60" width="18" height="2" rx="1" fill="#fff"/>
+                                <rect x="100" y="50" width="40" height="30" rx="2" fill="#f0f9ff"/>
+                                <rect x="105" y="65" width="8" height="10" rx="1" fill="#60a5fa"/>
+                                <rect x="116" y="58" width="8" height="17" rx="1" fill="#3b82f6"/>
+                                <rect x="127" y="62" width="8" height="13" rx="1" fill="#93c5fd"/>
+                                <text x="165" y="35" font-size="16" fill="#fbbf24">✦</text>
+                                <text x="35" y="30" font-size="12" fill="#fbbf24">✦</text>
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="banner-card banner-side">
+                        <div class="banner-content">
+                            <h3 class="banner-title-small">网页PPT设计师</h3>
+                            <p class="banner-desc-small">从风格造型、方向确认<br>到渐进式分批生成。</p>
+                        </div>
+                        <div class="banner-illustration-small">
+                            <svg viewBox="0 0 100 80" fill="none">
+                                <rect x="10" y="10" width="80" height="60" rx="4" fill="#f0f9ff" stroke="#dbeafe" stroke-width="1"/>
+                                <rect x="20" y="20" width="25" height="18" rx="2" fill="#3b82f6"/>
+                                <rect x="50" y="20" width="30" height="8" rx="1" fill="#93c5fd"/>
+                                <rect x="50" y="32" width="20" height="4" rx="1" fill="#dbeafe"/>
+                                <rect x="20" y="45" width="60" height="4" rx="1" fill="#e5e7eb"/>
+                                <rect x="20" y="52" width="40" height="4" rx="1" fill="#e5e7eb"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 分类标签 -->
+                <div class="category-tags">
+                    <div class="tag-item active">全部</div>
+                    <div class="tag-item">软件开发</div>
+                    <div class="tag-item">内容创作</div>
+                    <div class="tag-item">营销增长</div>
+                    <div class="tag-item">金融</div>
+                    <div class="tag-item">个人生产力</div>
+                    <div class="tag-item">学术教育</div>
+                </div>
+
+                <!-- Agent 卡片网格 -->
+                <div class="agent-grid" id="agentGrid">
+                    <div class="agent-store-card" data-agent-name="播客配音助手" onclick="showAgentDetail('播客配音助手')">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/播客配音助手.png" alt="播客配音助手" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">播客配音助手</div>
+                            <div class="agent-store-desc">帮你将写好的字稿变为能直接试听...</div>
+                        </div>
+                        <button class="install-btn" onclick="event.stopPropagation(); installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="跨境电商操盘助手">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/跨境电商操盘助手.png" alt="跨境电商操盘助手" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">跨境电商操盘助手</div>
+                            <div class="agent-store-desc">面向 Amazon 与 eBay 卖家的实...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="超能开发官">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/超能开发官.png" alt="超能开发官" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">超能开发官</div>
+                            <div class="agent-store-desc">面向软件开发全流程的编排型...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="论文研读助手">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/论文研读助手.png" alt="论文研读助手" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">论文研读助手</div>
+                            <div class="agent-store-desc">面向个人科研的全生命周期工作站...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="新闻情报台">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/新闻情报台.png" alt="新闻情报台" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">新闻情报台</div>
+                            <div class="agent-store-desc">面向中文用户的全网新闻情报台，...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="办公交付助理">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/办公交付助理.png" alt="办公交付助理" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">办公交付助理</div>
+                            <div class="agent-store-desc">跨格式办公交付编排器，把零散材...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="网页PPT设计师">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/网页PPT设计师.png" alt="网页PPT设计师" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">网页PPT设计师</div>
+                            <div class="agent-store-desc">浏览器原生演示文稿工作室，从风...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="知识体系构建师">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/image 351.png" alt="知识体系构建师" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">知识体系构建师</div>
+                            <div class="agent-store-desc">把碎片化的学习输入（文章、书籍...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="agent-store-card" data-agent-name="股票分析助手">
+                        <div class="agent-store-icon">
+                            <img src="agent Avatar/股票分析助手.png" alt="股票分析助手" style="width: 100%; height: 100%; object-fit: cover; border-radius: 12px;">
+                        </div>
+                        <div class="agent-store-info">
+                            <div class="agent-store-name">股票分析助手</div>
+                            <div class="agent-store-desc">面向 A 股优先的股票研究与跟踪...</div>
+                        </div>
+                        <button class="install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Agent 详情页 -->
+                <div class="agent-detail-page" id="agentDetailPage" style="display: none;">
+                    <!-- 返回按钮 -->
+                    <div class="detail-back" onclick="hideAgentDetail()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                        <span>Agent 商店</span>
+                    </div>
+
+                    <!-- 头部信息 -->
+                    <div class="detail-header">
+                        <div class="detail-icon">
+                            <img src="agent Avatar/播客配音助手.png" alt="播客配音助手" id="detailIconImg">
+                        </div>
+                        <div class="detail-info">
+                            <h1 class="detail-title" id="detailTitle">播客配音助手</h1>
+                            <p class="detail-date">发布时间 2026/05/27</p>
+                        </div>
+                        <button class="detail-install-btn" onclick="installAgent(this)">
+                            <span>安装</span>
+                        </button>
+                    </div>
+
+                    <!-- 图片展示 -->
+                    <div class="detail-gallery">
+                        <div class="gallery-item">
+                            <img src="blog picture/Frame 1312319329.png" alt="功能截图1">
+                        </div>
+                        <div class="gallery-item">
+                            <img src="blog picture/Frame 1312319330.png" alt="功能截图2">
+                        </div>
+                        <div class="gallery-item">
+                            <img src="blog picture/ScreenShot_2026-05-28_103619_919.png" alt="功能截图3">
+                        </div>
+                    </div>
+
+                    <!-- 描述 -->
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">描述</h3>
+                        <p class="detail-desc" id="detailDesc">
+                            帮你将写好的字稿变为能直接试听的配音，志玲姐姐音、磁性播报音、四川方言、东北腔、标准男女声，五种风格直接选，支持上传自己的声音一键克隆，专属播客声线，适合片头、正文旁白、口播广告、单集预告等多个工作生活场景
+                        </p>
+                    </div>
+
+                    <!-- 使用场景 -->
+                    <div class="detail-section">
+                        <h3 class="detail-section-title">使用场景</h3>
+                        <div class="detail-scenarios">
+                            <div class="scenario-item">
+                                <span class="scenario-num">01</span>
+                                <p class="scenario-text">新一集稿子写好了，将文字稿和你喜欢的音色发给我，我会按照你给我的音色将文字稿转成音频，正式开录前你听听节奏和腔调顺不顺</p>
+                            </div>
+                            <div class="scenario-item">
+                                <span class="scenario-num">02</span>
+                                <p class="scenario-text">片头、片尾、中段口播如果想保持同一种语气与风格，请告诉我你想要的节目风格，我会分几段生成音频，供你剪辑拼取</p>
+                            </div>
+                            <div class="scenario-item">
+                                <span class="scenario-num">03</span>
+                                <p class="scenario-text">同一段文案想试不同声音或中英文效果，把台词和目标发我——我出几版试听，方便你挑最贴合你想要的那一条音频</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Agent 管理页面 -->
+                <div class="agent-manage-page" id="agentManagePage" style="display: none;">
+                    <!-- 管理页面内容区 -->
+                    <div class="manage-content">
+                        <!-- 左侧 Agent 列表 -->
+                        <div class="manage-sidebar">
+                            <div class="manage-agent-list">
+                                <div class="manage-agent-item active" data-agent="main" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/播客配音助手.png" alt="Main Agent">
+                                    </div>
+                                    <span class="manage-agent-name">Main Agent</span>
+                                    <span class="manage-agent-tag">默认</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="ppt" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/网页PPT设计师.png" alt="网页PPT设计师">
+                                    </div>
+                                    <span class="manage-agent-name">网页PPT设计师</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="crossborder" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/跨境电商操盘助手.png" alt="跨境电商操盘助手">
+                                    </div>
+                                    <span class="manage-agent-name">跨境电商操盘...</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="dev" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/超能开发官.png" alt="超能开发官">
+                                    </div>
+                                    <span class="manage-agent-name">超能开发官</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="news" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/新闻情报台.png" alt="新闻情报台">
+                                    </div>
+                                    <span class="manage-agent-name">新闻情报台</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="podcast" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/播客配音助手.png" alt="播客配音助手">
+                                    </div>
+                                    <span class="manage-agent-name">播客配音助手</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="dev2" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/超能开发官.png" alt="超能开发官">
+                                    </div>
+                                    <span class="manage-agent-name">超能开发官</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="dev3" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/超能开发官.png" alt="超能开发官">
+                                    </div>
+                                    <span class="manage-agent-name">超能开发官</span>
+                                </div>
+                                <div class="manage-agent-item" data-agent="crossborder2" onclick="selectManageAgent(this)">
+                                    <div class="manage-agent-avatar">
+                                        <img src="agent Avatar/跨境电商操盘助手.png" alt="跨境电商操盘助手">
+                                    </div>
+                                    <span class="manage-agent-name">跨境电商操盘...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 右侧主功能区 -->
+                        <div class="manage-main">
+                            <!-- 顶部操作栏 -->
+                            <div class="manage-header">
+                                <div class="manage-header-left">
+                                    <div class="manage-avatar">
+                                        <img src="agent Avatar/播客配音助手.png" alt="Main Agent" id="manageAvatarImg">
+                                    </div>
+                                    <div class="manage-header-info">
+                                        <h2 class="manage-header-title" id="manageHeaderTitle">Main Agent</h2>
+                                        <p class="manage-header-id" id="manageHeaderId">ID: main</p>
+                                    </div>
+                                </div>
+                                <button class="manage-chat-btn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                    打开对话
+                                </button>
+                            </div>
+
+                            <!-- 标签栏 -->
+                            <div class="manage-tabs">
+                                <div class="manage-tab-item active">概览</div>
+                                <div class="manage-tab-item">工具与技能</div>
+                                <div class="manage-tab-item">手机远程 (1)</div>
+                                <div class="manage-tab-item">文件</div>
+                                <div class="manage-tab-item">心跳</div>
+                                <div class="manage-tab-item">知识库</div>
+                            </div>
+
+                            <!-- 概览内容 -->
+                            <div class="manage-tab-content" id="manageOverview">
+                                <!-- 基本信息 -->
+                                <div class="manage-section">
+                                    <h3 class="manage-section-title">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                                            <path d="M2 17l10 5 10-5"/>
+                                            <path d="M2 12l10 5 10-5"/>
+                                        </svg>
+                                        基本信息
+                                    </h3>
+                                    <div class="manage-info-card">
+                                        <div class="manage-info-row">
+                                            <span class="manage-info-label">头像</span>
+                                            <div class="manage-info-avatar">
+                                                <img src="agent Avatar/播客配音助手.png" alt="头像" id="manageInfoAvatar">
+                                            </div>
+                                        </div>
+                                        <div class="manage-info-row">
+                                            <span class="manage-info-label">Agent 名称</span>
+                                            <span class="manage-info-value" id="manageInfoName">Main Agent</span>
+                                        </div>
+                                        <div class="manage-info-row">
+                                            <span class="manage-info-label">Agent ID</span>
+                                            <span class="manage-info-value" id="manageInfoId">main</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 系统信息 -->
+                                <div class="manage-section">
+                                    <h3 class="manage-section-title">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                            <line x1="8" y1="21" x2="16" y2="21"/>
+                                            <line x1="12" y1="17" x2="12" y2="21"/>
+                                        </svg>
+                                        系统信息
+                                    </h3>
+                                    <div class="manage-info-card">
+                                        <div class="manage-info-row">
+                                            <span class="manage-info-label">工作区</span>
+                                            <span class="manage-info-value">C:\Users\Flowy\.openclaw\workspace</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // Agent 项点击切换
+        document.querySelectorAll('.agent-item').forEach(item => {
+            item.addEventListener('click', function() {
+                document.querySelectorAll('.agent-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // Tab 切换
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // 导航项切换 - 点击跳转到对应页面
+        const pageMap = {
+            '对话': 'chat.html',
+            '专家': 'agent.html',
+            '任务': 'scheduled-tasks.html',
+            '知识库': 'knowledge-base.html',
+            '连接': 'channels-ui.html',
+            '设置': 'settings.html'
+        };
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const span = this.querySelector('span');
+                if (!span) return;
+                const text = span.textContent.trim();
+                const target = pageMap[text];
+                if (target) {
+                    window.location.href = target;
+                } else {
+                    // 无对应页面的项只切换active样式
+                    document.querySelectorAll('.sidebar .nav-item').forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                }
+            });
+        });
+
+        // 换一换按钮动画
+        const refreshBtn = document.querySelector('.refresh-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                const svg = this.querySelector('svg');
+                svg.style.transition = 'transform 0.5s';
+                svg.style.transform = 'rotate(360deg)';
+                setTimeout(() => {
+                    svg.style.transform = 'rotate(0deg)';
+                }, 500);
+            });
+        }
+
+        // 输入框焦点效果
+        const inputContainer = document.querySelector('.input-container');
+        const inputEditor = document.querySelector('.input-editor');
+        
+        if (inputContainer) {
+            inputContainer.addEventListener('click', function(e) {
+                // 如果点击的是工具栏按钮，不触发聚焦
+                if (e.target.closest('.input-toolbar') || e.target.closest('button')) {
+                    return;
+                }
+                this.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+                if (inputEditor) {
+                    inputEditor.focus();
+                }
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (inputContainer && !inputContainer.contains(e.target)) {
+                inputContainer.style.boxShadow = '';
+            }
+        });
+
+        // 输入框焦点事件
+        if (inputEditor) {
+            inputEditor.addEventListener('focus', function() {
+                inputContainer.style.boxShadow = '0 4px 20px rgba(0,0,0,0.1)';
+            });
+            
+            inputEditor.addEventListener('blur', function() {
+                inputContainer.style.boxShadow = '';
+            });
+        }
+
+        // 窗口控制按钮
+        const minimizeBtn = document.querySelector('.window-btn.minimize');
+        if (minimizeBtn) {
+            minimizeBtn.addEventListener('click', function() {
+                alert('最小化窗口');
+            });
+        }
+
+        const maximizeBtn = document.querySelector('.window-btn.maximize');
+        if (maximizeBtn) {
+            maximizeBtn.addEventListener('click', function() {
+                alert('最大化/还原窗口');
+            });
+        }
+
+        const closeBtn = document.querySelector('.window-btn.close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function() {
+                if (confirm('确定要关闭应用吗？')) {
+                    window.close();
+                }
+            });
+        }
+
+        // 附件上传功能
+        (function() {
+            const attachBtn = document.getElementById('attachBtn');
+            const fileInput = document.getElementById('fileInput');
+            const inputContainer = document.querySelector('.input-container');
+            
+            if (attachBtn && fileInput) {
+                attachBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fileInput.click();
+                });
+            }
+        
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    // 显示已上传文件
+                    let fileListHtml = '<div class="uploaded-files" style="margin-bottom: 10px; display: flex; flex-wrap: wrap; gap: 8px;">';
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        fileListHtml += `
+                            <div class="file-tag" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; background: #f0f0f0; border-radius: 6px; font-size: 13px; color: #333;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                                <span>${file.name}</span>
+                                <span style="color: #999; font-size: 11px;">(${(file.size / 1024).toFixed(1)} KB)</span>
+                                <button class="delete-btn" onclick="this.parentElement.remove()" title="删除">×</button>
+                            </div>
+                        `;
+                    }
+                    fileListHtml += '</div>';
+                    
+                    // 插入到输入框上方
+                    if (inputContainer) {
+                        const existingFiles = inputContainer.querySelector('.uploaded-files');
+                        if (existingFiles) {
+                            existingFiles.remove();
+                        }
+                        inputContainer.insertAdjacentHTML('afterbegin', fileListHtml);
+                    }
+                }
+            });
+        }
+        })();
+
+        // 模型选择下拉菜单
+        (function() {
+            const modelSelectBtn = document.getElementById('modelSelectBtn');
+            const modelDropdown = document.getElementById('modelDropdown');
+            const selectedModel = document.getElementById('selectedModel');
+            
+            if (modelSelectBtn && modelDropdown) {
+                // 点击按钮切换下拉菜单
+                modelSelectBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    modelDropdown.classList.toggle('show');
+                });
+                
+                // 点击选项选择模型
+                modelDropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                    item.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const modelName = this.dataset.model;
+                        
+                        // 更新选中状态
+                        modelDropdown.querySelectorAll('.model-dropdown-item').forEach(i => {
+                            i.classList.remove('selected');
+                            const checkmark = i.querySelector('svg:last-child');
+                            if (checkmark) checkmark.style.display = 'none';
+                        });
+                        this.classList.add('selected');
+                        
+                        // 显示对勾
+                        const checkmark = this.querySelector('svg:last-child');
+                        if (checkmark) checkmark.style.display = 'block';
+                        
+                        // 更新按钮文字
+                        selectedModel.textContent = modelName;
+                        
+                        // 关闭下拉菜单
+                        modelDropdown.classList.remove('show');
+                    });
+                });
+                
+                // 点击外部关闭下拉菜单
+                document.addEventListener('click', function() {
+                    modelDropdown.classList.remove('show');
+                });
+                
+                // 初始化：隐藏非选中项的对勾
+                modelDropdown.querySelectorAll('.model-dropdown-item').forEach(item => {
+                    if (!item.classList.contains('selected')) {
+                        const checkmark = item.querySelector('svg:last-child');
+                        if (checkmark) checkmark.style.display = 'none';
+                    }
+                });
+            }
+        })();
+
+        // Agent 切换功能
+        (function() {
+            const agentItems = document.querySelectorAll('.agent-item');
+            const flowyWelcome = document.getElementById('flowyWelcome');
+            const pmPage = document.getElementById('pmPage');
+            const gameDesignerPage = document.getElementById('gameDesignerPage');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const skillsGrid = document.getElementById('skillsGrid');
+            
+            // 隐藏所有专属页面的辅助函数
+            function hideAllSpecialPages() {
+                if (pmPage) pmPage.style.display = 'none';
+                if (gameDesignerPage) gameDesignerPage.style.display = 'none';
+            }
+            
+            // 显示默认页面的辅助函数
+            function showDefaultPage() {
+                hideAllSpecialPages();
+                if (flowyWelcome) flowyWelcome.style.display = 'block';
+                if (refreshBtn) refreshBtn.style.display = 'flex';
+                if (skillsGrid) skillsGrid.style.display = 'grid';
+            }
+            
+            agentItems.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    // 如果点击的是操作按钮或菜单，不切换页面
+                    if (e.target.closest('.agent-actions') || e.target.closest('.more-menu')) {
+                        return;
+                    }
+                    
+                    // 更新选中状态
+                    agentItems.forEach(i => i.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const agentName = this.querySelector('.agent-name').textContent;
+                    
+                    if (agentName === '产品经理') {
+                        // 显示产品经理页面
+                        hideAllSpecialPages();
+                        if (flowyWelcome) flowyWelcome.style.display = 'none';
+                        if (refreshBtn) refreshBtn.style.display = 'none';
+                        if (skillsGrid) skillsGrid.style.display = 'none';
+                        if (pmPage) pmPage.style.display = 'flex';
+                    } else if (agentName === '游戏设计师') {
+                        // 显示游戏设计师页面
+                        hideAllSpecialPages();
+                        if (flowyWelcome) flowyWelcome.style.display = 'none';
+                        if (refreshBtn) refreshBtn.style.display = 'none';
+                        if (skillsGrid) skillsGrid.style.display = 'none';
+                        if (gameDesignerPage) gameDesignerPage.style.display = 'flex';
+                    } else if (agentName === 'AI助手') {
+                        // 显示 AI助手 默认页面
+                        showDefaultPage();
+                    } else {
+                        // 其他 Agent 显示默认页面
+                        showDefaultPage();
+                    }
+                });
+            });
+        })();
+
+        // Agent 历史记录展开功能
+        (function() {
+            const agentWrappers = document.querySelectorAll('.agent-item-wrapper');
+            
+            agentWrappers.forEach(wrapper => {
+                const toggleBtn = wrapper.querySelector('.toggle-btn');
+                const moreBtn = wrapper.querySelector('.more-btn');
+                const history = wrapper.querySelector('.agent-history');
+                const moreMenu = wrapper.querySelector('.more-menu');
+                
+                // 点击展开/收起按钮
+                if (toggleBtn && history) {
+                    toggleBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        history.classList.toggle('expanded');
+                        
+                        // 旋转箭头图标
+                        const svg = this.querySelector('svg');
+                        if (history.classList.contains('expanded')) {
+                            svg.style.transform = 'rotate(180deg)';
+                        } else {
+                            svg.style.transform = 'rotate(0deg)';
+                        }
+                        svg.style.transition = 'transform 0.2s';
+                    });
+                }
+                
+                // 点击更多按钮
+                if (moreBtn && moreMenu) {
+                    moreBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        // 关闭其他菜单
+                        document.querySelectorAll('.more-menu').forEach(menu => {
+                            if (menu !== moreMenu) menu.classList.remove('show');
+                        });
+                        moreMenu.classList.toggle('show');
+                    });
+                }
+                
+                // 点击菜单项
+                if (moreMenu) {
+                    moreMenu.querySelectorAll('.more-menu-item').forEach(item => {
+                        item.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const text = this.querySelector('span').textContent;
+                            console.log('点击了：' + text);
+                            moreMenu.classList.remove('show');
+                        });
+                    });
+                }
+            });
+            
+            // 点击外部关闭菜单
+            document.addEventListener('click', function() {
+                document.querySelectorAll('.more-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            });
+        })();
+
+        // 对话消息功能
+        (function() {
+            const chatMessages = document.getElementById('chatMessages');
+            const contentArea = document.getElementById('contentArea');
+            const flowyWelcome = document.getElementById('flowyWelcome');
+            const skillsGrid = document.getElementById('skillsGrid');
+            const refreshBtn = document.getElementById('refreshBtn');
+            const inputEditor = document.querySelector('.input-editor');
+
+            // 显示对话区域，隐藏欢迎页面
+            function showChatArea() {
+                chatMessages.classList.add('active');
+                if (flowyWelcome) flowyWelcome.style.display = 'none';
+                if (skillsGrid) skillsGrid.style.display = 'none';
+                if (refreshBtn) refreshBtn.style.display = 'none';
+                // 滚动到底部
+                setTimeout(() => {
+                    contentArea.scrollTop = contentArea.scrollHeight;
+                }, 100);
+            }
+
+            // 添加用户消息
+            function addUserMessage(text) {
+                const messageHtml = `
+                    <div class="message-user">
+                        <div class="message-user-content">${escapeHtml(text)}</div>
+                        <div class="message-avatar">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" alt="用户头像">
+                        </div>
+                    </div>
+                `;
+                chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+                contentArea.scrollTop = contentArea.scrollHeight;
+            }
+
+            // 添加 AI 消息
+            function addAiMessage(htmlContent) {
+                const messageHtml = `
+                    <div class="message-ai">
+                        <div class="message-avatar" style="background: #000000; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: white; font-weight: bold; font-size: 14px;">F</span>
+                        </div>
+                        <div class="message-ai-content">
+                            <div class="message-ai-text">${htmlContent}</div>
+                            <div class="message-actions">
+                                <button class="message-action-btn" title="复制">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="点赞">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="点踩">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="重新生成">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="23 4 23 10 17 10"/>
+                                        <polyline points="1 20 1 14 7 14"/>
+                                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="朗读">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                                    </svg>
+                                </button>
+                                <button class="message-action-btn" title="分享">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <circle cx="18" cy="5" r="3"/>
+                                        <circle cx="6" cy="12" r="3"/>
+                                        <circle cx="18" cy="19" r="3"/>
+                                        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                                        <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.insertAdjacentHTML('beforeend', messageHtml);
+                contentArea.scrollTop = contentArea.scrollHeight;
+            }
+
+            // 转义 HTML
+            function escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            // Skill 安装回复内容
+            const skillReplyContent = `
+                <p>Skill 就是给 AI Agent 装上的「专项能力」，不同的 Skill 让 Agent 能做不同的事情。就好比一个人本来只会说话，装了不同的 Skill 之后：</p>
+                <div class="skill-examples">
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">☁️</span>
+                        <span>装了「天气 Skill」→ 能实时查天气</span>
+                    </div>
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">📁</span>
+                        <span>装了「文件 Skill」→ 能读写各种文档</span>
+                    </div>
+                    <div class="skill-example-item">
+                        <span class="skill-example-icon">💻</span>
+                        <span>装了「代码 Skill」→ 能写程序、跑代码</span>
+                    </div>
+                </div>
+                <p>👇 Skills的类型有很多，让我为你举个例子：</p>
+                <div class="skill-type-section">
+                    <div class="skill-type-title">
+                        <span class="skill-type-icon">📁</span>
+                        <span>文件读写类</span>
+                    </div>
+                    <div class="skill-type-desc">
+                        文件阅读：把 PDF、Word、Excel、TXT 丢给它，它帮你读懂里面写了什么<br>
+                        看图理解：把图片发给它，它能看懂图里的内容，比如识别表格截图、分析图表
+                    </div>
+                </div>
+                <p>✨ <strong>怎么安装？说句话就行，啥都不用管！</strong></p>
+                <p>你不需要手动去找、去装任何 Skill。只要把你想做的事用大白话说清楚，QClaw 就会自动识别当前任务需要哪些 Skill，并在后台悄悄完成安装，全程无感，立刻开干。</p>
+                <div class="skill-cards-grid">
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">实时天气 Skill</div>
+                        <div class="skill-card-mini-desc">安装Weather技能</div>
+                    </div>
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">文件处理 Skill</div>
+                        <div class="skill-card-mini-desc">安装docx技能</div>
+                    </div>
+                    <div class="skill-card-mini">
+                        <div class="skill-card-mini-title">代码开发 Skill</div>
+                        <div class="skill-card-mini-desc">安装GitHub技能</div>
+                    </div>
+                </div>
+            `;
+
+            // 点击 Skill 卡片
+            document.querySelectorAll('.skill-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const title = this.querySelector('.skill-title').textContent;
+                    
+                    if (title === '安装你的第一个Skill') {
+                        showChatArea();
+                        addUserMessage('请解释什么是skill？说明如何安装skill？');
+                        
+                        // 模拟 AI 回复延迟
+                        setTimeout(() => {
+                            addAiMessage(skillReplyContent);
+                        }, 800);
+                    }
+                });
+            });
+
+            // 输入框发送消息
+            if (inputEditor) {
+                inputEditor.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const text = this.textContent.trim();
+                        if (text) {
+                            showChatArea();
+                            addUserMessage(text);
+                            this.textContent = '';
+                            
+                            // 模拟 AI 回复
+                            setTimeout(() => {
+                                addAiMessage('<p>收到你的消息：' + escapeHtml(text) + '</p><p>我是 Flowy，很高兴为你服务！</p>');
+                            }, 800);
+                        }
+                    }
+                });
+            }
+        })();
+
+        // 历史记录项菜单功能
+        function toggleHistoryItemMenu(event, btn) {
+            event.stopPropagation();
+            const menu = btn.nextElementSibling;
+            
+            // 关闭其他所有菜单
+            document.querySelectorAll('.history-item-menu').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+            
+            // 切换当前菜单
+            menu.classList.toggle('show');
+        }
+
+        // 编辑历史记录名称
+        function editHistoryItemName(event, item) {
+            event.stopPropagation();
+            const historyItem = item.closest('.history-item');
+            const textSpan = historyItem.querySelector('.history-item-text');
+            const currentText = textSpan.textContent;
+            
+            // 创建输入框
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.style.cssText = 'flex: 1; border: none; background: transparent; font-size: 12px; color: var(--text-primary); outline: none; padding: 0;';
+            
+            textSpan.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            // 隐藏菜单
+            item.closest('.history-item-menu').classList.remove('show');
+            
+            // 保存编辑
+            function saveEdit() {
+                const newText = input.value.trim() || currentText;
+                const newSpan = document.createElement('span');
+                newSpan.className = 'history-item-text';
+                newSpan.textContent = newText;
+                input.replaceWith(newSpan);
+            }
+            
+            input.addEventListener('blur', saveEdit);
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                }
+            });
+        }
+
+        // 删除历史记录
+        function deleteHistoryItem(event, item) {
+            event.stopPropagation();
+            const historyItem = item.closest('.history-item');
+            
+            // 隐藏菜单
+            item.closest('.history-item-menu').classList.remove('show');
+            
+            // 删除动画
+            historyItem.style.transition = 'all 0.2s';
+            historyItem.style.opacity = '0';
+            historyItem.style.transform = 'translateX(-10px)';
+            
+            setTimeout(() => {
+                historyItem.remove();
+            }, 200);
+        }
+
+        // 点击外部关闭历史记录项菜单
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.history-item-menu').forEach(menu => {
+                menu.classList.remove('show');
+            });
+        });
+
+        // Agent 安装功能
+        function installAgent(btn) {
+            if (btn.classList.contains('installing')) return;
+            
+            const card = btn.closest('.agent-store-card');
+            const agentName = card.dataset.agentName;
+            
+            // 显示安装中状态
+            btn.classList.add('installing');
+            btn.querySelector('span').textContent = '安装中...';
+            
+            // 3秒后显示安装成功弹窗
+            setTimeout(() => {
+                showInstallSuccessModal(agentName);
+                
+                // 恢复按钮状态
+                btn.classList.remove('installing');
+                btn.querySelector('span').textContent = '安装';
+            }, 3000);
+        }
+
+        // Tab 切换函数
+        function switchTab(tab) {
+            const storeTabs = document.querySelectorAll('#storeTabs .tab-item');
+            const grid = document.getElementById('agentGrid');
+            const banner = document.querySelector('.banner-section');
+            const tags = document.querySelector('.category-tags');
+            const detail = document.getElementById('agentDetailPage');
+            const manage = document.getElementById('agentManagePage');
+            
+            if (tab === 'store') {
+                // 切换到商店
+                storeTabs[0].classList.add('active');
+                storeTabs[1].classList.remove('active');
+                grid.style.display = 'grid';
+                banner.style.display = 'flex';
+                tags.style.display = 'flex';
+                detail.style.display = 'none';
+                manage.style.display = 'none';
+            } else {
+                // 切换到管理
+                storeTabs[0].classList.remove('active');
+                storeTabs[1].classList.add('active');
+                grid.style.display = 'none';
+                banner.style.display = 'none';
+                tags.style.display = 'none';
+                detail.style.display = 'none';
+                manage.style.display = 'flex';
+            }
+        }
+
+        // 新建 Agent 函数
+        function createNewAgent() {
+            document.getElementById('createAgentModal').classList.add('active');
+        }
+
+        // 关闭新建 Agent 弹窗
+        function closeCreateAgentModal() {
+            document.getElementById('createAgentModal').classList.remove('active');
+        }
+
+        // 更新字符计数
+        function updateCharCount(input, max) {
+            const count = input.value.length;
+            const countId = input.id === 'agentName' ? 'nameCount' : 'descCount';
+            document.getElementById(countId).textContent = count;
+        }
+
+        // 切换头像选择器
+        function toggleAvatarSelector() {
+            document.getElementById('avatarSelector').classList.toggle('active');
+        }
+
+        // 选择头像
+        function selectAvatar(element, src) {
+            document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('selectedAvatar').src = src;
+        }
+
+        // 切换高级设置
+        function toggleAdvanced() {
+            document.getElementById('advancedToggle').classList.toggle('active');
+            document.getElementById('advancedSection').classList.toggle('active');
+        }
+
+        // 切换技能选择
+        function toggleSkill(element) {
+            element.classList.toggle('selected');
+        }
+
+        // 切换常用技能标签
+        function toggleSkillTag(element) {
+            element.classList.toggle('selected');
+        }
+
+        // 搜索技能
+        function filterSkills() {
+            const search = document.getElementById('skillSearch').value.toLowerCase();
+            document.querySelectorAll('.skill-item').forEach(item => {
+                const name = item.querySelector('.skill-name').textContent.toLowerCase();
+                const desc = item.querySelector('.skill-desc').textContent.toLowerCase();
+                item.style.display = (name.includes(search) || desc.includes(search)) ? 'flex' : 'none';
+            });
+        }
+
+        // 提交创建 Agent
+        function submitCreateAgent() {
+            const name = document.getElementById('agentName').value.trim();
+            const desc = document.getElementById('agentDesc').value.trim();
+            
+            if (!name) {
+                alert('请输入专家名称');
+                return;
+            }
+            if (!desc) {
+                alert('请输入专家核心职责描述');
+                return;
+            }
+            
+            // 显示创建成功弹窗
+            document.getElementById('createAgentName').textContent = name;
+            document.getElementById('createSuccessModal').style.display = 'flex';
+            closeCreateAgentModal();
+        }
+
+        // 关闭创建成功弹窗
+        function closeCreateSuccessModal() {
+            document.getElementById('createSuccessModal').style.display = 'none';
+        }
+
+        // 从创建成功弹窗去聊天
+        function goToChatFromCreate() {
+            closeCreateSuccessModal();
+            switchTab('chat');
+        }
+
+        // 选择管理页面的 Agent
+        function selectManageAgent(element) {
+            document.querySelectorAll('.manage-agent-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+            
+            const agentName = element.querySelector('.manage-agent-name').textContent;
+            const agentImg = element.querySelector('.manage-agent-avatar img').src;
+            
+            // 更新头部信息
+            document.getElementById('manageHeaderTitle').textContent = agentName;
+            document.getElementById('manageAvatarImg').src = agentImg;
+            document.getElementById('manageInfoName').textContent = agentName;
+            document.getElementById('manageInfoAvatar').src = agentImg;
+            
+            // 更新 ID
+            const agentId = element.dataset.agent;
+            document.getElementById('manageHeaderId').textContent = 'ID: ' + agentId;
+            document.getElementById('manageInfoId').textContent = agentId;
+        }
+
+        // 显示 Agent 详情页
+        function showAgentDetail(agentName) {
+            const grid = document.getElementById('agentGrid');
+            const detail = document.getElementById('agentDetailPage');
+            const tabs = document.querySelector('.store-tabs');
+            const banner = document.querySelector('.banner-section');
+            const tags = document.querySelector('.category-tags');
+            
+            // 隐藏商店元素
+            grid.style.display = 'none';
+            tabs.style.display = 'none';
+            banner.style.display = 'none';
+            tags.style.display = 'none';
+            
+            // 显示详情页
+            detail.style.display = 'block';
+            
+            // 更新详情内容
+            document.getElementById('detailTitle').textContent = agentName;
+            document.getElementById('detailIconImg').src = `agent Avatar/${agentName}.png`;
+            document.getElementById('detailIconImg').alt = agentName;
+        }
+
+        // 隐藏 Agent 详情页
+        function hideAgentDetail() {
+            const grid = document.getElementById('agentGrid');
+            const detail = document.getElementById('agentDetailPage');
+            const tabs = document.querySelector('.store-tabs');
+            const banner = document.querySelector('.banner-section');
+            const tags = document.querySelector('.category-tags');
+            
+            // 显示商店元素
+            grid.style.display = 'grid';
+            tabs.style.display = 'flex';
+            banner.style.display = 'flex';
+            tags.style.display = 'flex';
+            
+            // 隐藏详情页
+            detail.style.display = 'none';
+        }
+
+        // 显示安装成功弹窗
+        function showInstallSuccessModal(agentName) {
+            const modal = document.getElementById('installSuccessModal');
+            const agentNameSpan = document.getElementById('modalAgentName');
+            agentNameSpan.textContent = agentName;
+            modal.classList.add('active');
+        }
+
+        // 关闭弹窗
+        function closeInstallModal() {
+            const modal = document.getElementById('installSuccessModal');
+            modal.classList.remove('active');
+        }
+
+        // 去首页聊天
+        function goToChat() {
+            closeInstallModal();
+            // 这里可以添加导航逻辑
+            alert('前往首页聊天');
+        }
+
+        // 点击弹窗外部关闭
+        document.addEventListener('click', function(e) {
+            const modal = document.getElementById('installSuccessModal');
+            if (e.target === modal) {
+                closeInstallModal();
+            }
+        });
+    </script>
+
+    <!-- 新建 Agent 弹窗 -->
+    <div class="create-agent-overlay" id="createAgentModal">
+        <div class="create-agent-modal">
+            <div class="create-agent-header">
+                <div>
+                    <div class="create-agent-title">创建<span style="color: #f97316;">Agent</span></div>
+                </div>
+                <button class="create-agent-close" onclick="closeCreateAgentModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="create-agent-body">
+                <!-- 头像选择 -->
+                <div class="avatar-section">
+                    <div class="avatar-preview" onclick="toggleAvatarSelector()">
+                        <img src="agent Avatar/播客配音助手.png" alt="头像" id="selectedAvatar">
+                    </div>
+                </div>
+                
+                <!-- 头像选择器 -->
+                <div class="avatar-selector" id="avatarSelector">
+                    <div class="avatar-option selected" onclick="selectAvatar(this, 'agent Avatar/播客配音助手.png')">
+                        <img src="agent Avatar/播客配音助手.png" alt="头像1">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/跨境电商操盘助手.png')">
+                        <img src="agent Avatar/跨境电商操盘助手.png" alt="头像2">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/超能开发官.png')">
+                        <img src="agent Avatar/超能开发官.png" alt="头像3">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/论文研读助手.png')">
+                        <img src="agent Avatar/论文研读助手.png" alt="头像4">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/新闻情报台.png')">
+                        <img src="agent Avatar/新闻情报台.png" alt="头像5">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/办公交付助理.png')">
+                        <img src="agent Avatar/办公交付助理.png" alt="头像6">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/网页PPT设计师.png')">
+                        <img src="agent Avatar/网页PPT设计师.png" alt="头像7">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/知识体系构建师.png')">
+                        <img src="agent Avatar/知识体系构建师.png" alt="头像8">
+                    </div>
+                    <div class="avatar-option" onclick="selectAvatar(this, 'agent Avatar/股票分析助手.png')">
+                        <img src="agent Avatar/股票分析助手.png" alt="头像9">
+                    </div>
+                    <div class="avatar-add" onclick="alert('自定义上传功能即将上线')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"/>
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- 专家名称 -->
+                <div class="form-group">
+                    <label class="form-label">专家名称 <span class="required">*</span></label>
+                    <input type="text" class="form-input" placeholder="请输入名字" id="agentName" maxlength="15" oninput="updateCharCount(this, 15)">
+                    <div class="char-count"><span id="nameCount">0</span> / 15</div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-label">请简要描述该专家的核心职责 <span class="required">*</span></div>
+                    <textarea class="form-textarea" placeholder="请描述该Agent的执行方式，例如角色设定、职责范围、处理步骤、输出风格及需遵守的规范等。&#10;示例：&#10;#角色身份&#10;你是谁？（例：你是一名具有15年经验的高级运营专家）&#10;#核心任务&#10;你帮我做什么？（例：负责把枯燥的产品卖点转化成吸引人的小红书文案）&#10;#处理步骤&#10;先做什么，再做什么？（例：先分析目标受众，再提炼卖点，最后生成高质量版本）&#10;#必遵守则&#10;绝对不能做什么？（例：严禁虚假宣传，不使用过时的网络烂梗，不要编造信息）&#10;#输出要求&#10;说话什么语气？（例：语气要活泼，富有感染力，用段落分明的方式排版）" id="agentDesc" oninput="updateCharCount(this, 100)"></textarea>
+                    <div class="char-count"><span id="descCount">0</span> / 100</div>
+                </div>
+                
+                <!-- 技能选择 -->
+                <div class="form-group">
+                    <label class="form-label">技能</label>
+                    <div class="skills-section">
+                        <div class="skills-search">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                            </svg>
+                            <input type="text" placeholder="搜索技能,按 ↵ 搜索" id="skillSearch" oninput="filterSkills()">
+                        </div>
+                        <div class="skills-list" id="skillsList">
+                            <div class="skill-item" onclick="toggleSkill(this)">
+                                <div class="skill-checkbox">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="skill-info">
+                                    <div class="skill-name">lark-approval</div>
+                                    <div class="skill-desc">飞书审批 API：审批实例、审批任务管理。</div>
+                                </div>
+                            </div>
+                            <div class="skill-item" onclick="toggleSkill(this)">
+                                <div class="skill-checkbox">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="skill-info">
+                                    <div class="skill-name">lark-apps</div>
+                                    <div class="skill-desc">把本地 HTML 文件或目录部署到飞书妙搭（Miaoda），生成一个公网可访问的应用及其链接。</div>
+                                </div>
+                            </div>
+                            <div class="skill-item" onclick="toggleSkill(this)">
+                                <div class="skill-checkbox">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="skill-info">
+                                    <div class="skill-name">lark-attendance</div>
+                                    <div class="skill-desc">飞书考勤打卡：查询自己的考勤打卡记录。</div>
+                                </div>
+                            </div>
+                            <div class="skill-item" onclick="toggleSkill(this)">
+                                <div class="skill-checkbox">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="skill-info">
+                                    <div class="skill-name">lark-base</div>
+                                    <div class="skill-desc">当需要用 lark-cli 操作飞书多维表格（Base）时调用：搜索 Base、建表、字段管理、记录读写。</div>
+                                </div>
+                            </div>
+                            <div class="skill-item" onclick="toggleSkill(this)">
+                                <div class="skill-checkbox">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                </div>
+                                <div class="skill-info">
+                                    <div class="skill-name">lark-calendar</div>
+                                    <div class="skill-desc">飞书日历：提供日历与日程（会议）的全面管理能力。</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 常用技能 -->
+                <div class="form-group">
+                    <label class="form-label">常用技能</label>
+                    <div class="skills-tags" id="skillsTags">
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>文案写作</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>表格整理</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>数据分析</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>会议纪要</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>翻译</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>图像生成</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>代码开发</span>
+                        </div>
+                        <div class="skill-tag selected" onclick="toggleSkillTag(this)">
+                            <div class="skill-tag-checkbox">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                            </div>
+                            <span>语音识别</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="create-agent-footer">
+                <button class="btn-cancel" onclick="closeCreateAgentModal()">取消</button>
+                <button class="btn-create" onclick="submitCreateAgent()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建成功弹窗 -->
+    <div class="modal-overlay" id="createSuccessModal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-icon" style="background: #f97316; color: white;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div class="modal-title">创建成功!</div>
+            <div class="modal-desc"><span id="createAgentName"></span> 已成功创建</div>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button class="modal-btn modal-btn-secondary" onclick="closeCreateSuccessModal()">完成</button>
+                <button class="modal-btn modal-btn-primary" onclick="goToChatFromCreate()" style="background: #f97316; color: white; border-color: #f97316;">去聊天</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 安装成功弹窗 -->
+    <div class="modal-overlay" id="installSuccessModal">
+        <div class="modal-content">
+            <div class="modal-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+            </div>
+            <div class="modal-title">安装成功!</div>
+            <div class="modal-desc"><span id="modalAgentName"></span> 已成功添加到您的列表中</div>
+            <button class="modal-btn modal-btn-primary" onclick="goToChat()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; vertical-align: middle; margin-right: 6px;">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                去首页聊天
+            </button>
+            <button class="modal-btn modal-btn-secondary" onclick="closeInstallModal()">留在 Agent 中心</button>
+        </div>
+    </div>
+</body>
+</html>
