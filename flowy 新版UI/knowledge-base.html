@@ -342,14 +342,18 @@
             gap: 8px;
             cursor: pointer;
             position: relative;
-            padding: 2px 4px;
-            border-radius: 6px;
-            transition: background 0.2s;
+            padding: 0 12px;
+            height: 36px;
+            background: #ffffff;
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            transition: all 0.2s;
             width: fit-content;
         }
 
         .detail-agent:hover {
-            background: #f1f5f9;
+            background: var(--bg-hover);
+            border-color: #d0d0d0;
         }
 
         .detail-agent img {
@@ -439,7 +443,6 @@
         .detail-toolbar {
             display: flex;
             align-items: center;
-            justify-content: space-between;
             margin-bottom: 16px;
             gap: 12px;
         }
@@ -489,6 +492,7 @@
             align-items: center;
             gap: 8px;
             flex-shrink: 0;
+            margin-left: auto;
         }
 
         .detail-btn {
@@ -1683,40 +1687,6 @@
                                 返回上级
                             </div>
                             <div class="detail-title" id="detailTitle">22</div>
-                            <div class="detail-agent" id="detailAgent" onclick="toggleDetailAgentDropdown()">
-                                <img src="agent%20Avatar/image%20344.png" alt="agent" id="detailAgentImg">
-                                <span id="detailAgentName">GPT-4</span>
-                                <svg class="detail-agent-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <polyline points="6 9 12 15 18 9"/>
-                                </svg>
-                                <div class="detail-agent-dropdown" id="detailAgentDropdown">
-                                    <div class="agent-option" data-value="gpt-4" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20344.png" alt="GPT-4">
-                                        <span class="agent-name">GPT-4</span>
-                                    </div>
-                                    <div class="agent-option" data-value="gpt-4o" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20345.png" alt="GPT-4o">
-                                        <span class="agent-name">GPT-4o</span>
-                                    </div>
-                                    <div class="agent-option" data-value="claude-3" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20346.png" alt="Claude 3">
-                                        <span class="agent-name">Claude 3</span>
-                                    </div>
-                                    <div class="agent-option" data-value="claude-3-5" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20347.png" alt="Claude 3.5">
-                                        <span class="agent-name">Claude 3.5 Sonnet</span>
-                                    </div>
-                                    <div class="agent-option" data-value="gemini-pro" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20348.png" alt="Gemini Pro">
-                                        <span class="agent-name">Gemini Pro</span>
-                                    </div>
-                                    <div class="agent-option" data-value="local-llm" onclick="selectDetailAgent(this)">
-                                        <img class="agent-avatar" src="agent%20Avatar/image%20349.png" alt="本地大模型">
-                                        <span class="agent-name">本地大模型</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="detail-subtitle" id="detailSubtitle">管理和协作您的文档</div>
                         </div>
                         <div class="detail-header-right">
                             <button class="detail-btn detail-btn-primary">
@@ -1737,6 +1707,39 @@
                                 <path d="M21 21l-4.35-4.35"/>
                             </svg>
                             <input type="text" placeholder="搜索文档" class="detail-search-input">
+                        </div>
+                        <div class="detail-agent" id="detailAgent" onclick="toggleDetailAgentDropdown()">
+                            <img src="agent%20Avatar/image%20344.png" alt="agent" id="detailAgentImg">
+                            <span id="detailAgentName">GPT-4</span>
+                            <svg class="detail-agent-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                            <div class="detail-agent-dropdown" id="detailAgentDropdown">
+                                <div class="agent-option" data-value="gpt-4" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20344.png" alt="GPT-4">
+                                    <span class="agent-name">GPT-4</span>
+                                </div>
+                                <div class="agent-option" data-value="gpt-4o" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20345.png" alt="GPT-4o">
+                                    <span class="agent-name">GPT-4o</span>
+                                </div>
+                                <div class="agent-option" data-value="claude-3" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20346.png" alt="Claude 3">
+                                    <span class="agent-name">Claude 3</span>
+                                </div>
+                                <div class="agent-option" data-value="claude-3-5" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20347.png" alt="Claude 3.5">
+                                    <span class="agent-name">Claude 3.5 Sonnet</span>
+                                </div>
+                                <div class="agent-option" data-value="gemini-pro" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20348.png" alt="Gemini Pro">
+                                    <span class="agent-name">Gemini Pro</span>
+                                </div>
+                                <div class="agent-option" data-value="local-llm" onclick="selectDetailAgent(this)">
+                                    <img class="agent-avatar" src="agent%20Avatar/image%20349.png" alt="本地大模型">
+                                    <span class="agent-name">本地大模型</span>
+                                </div>
+                            </div>
                         </div>
                         <div class="detail-actions">
                             <div class="view-toggle active" id="viewListBtn" onclick="toggleView('list')">
